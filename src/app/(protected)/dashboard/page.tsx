@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
@@ -31,15 +31,13 @@ interface ClientProfile {
 }
 
 interface CampaignAction {
-  _id: string;
-  actionType: string;
+  actionId: string;
+  contentKey: string;
   quantity: number;
-  unitCost: number;
   totalCost: number;
 }
 
 interface Campaign {
-  _id: string;
   campaignId: string;
   serviceHeading: string;
   link: string;
@@ -54,7 +52,7 @@ export default function Dashboard() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [showPwdForm, setShowPwdForm] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [loadingCampaigns, setLoadingCampaigns] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [passwords, setPasswords] = useState({ oldPassword: '', newPassword: '' });
 
   useEffect(() => {
@@ -71,11 +69,11 @@ export default function Dashboard() {
           api.post('/campaign/getByClient', { clientId }, { headers: { Authorization: `Bearer ${token}` } }),
         ]);
         setClient(profileRes.data);
-        setCampaigns((campaignRes.data as any).campaigns || []);
+        setCampaigns(campaignRes.data.campaigns || []);
       } catch (err) {
         console.error(err);
       } finally {
-        setLoadingCampaigns(false);
+        setLoading(false);
       }
     })();
   }, [router]);
@@ -89,29 +87,24 @@ export default function Dashboard() {
   const fullName = client.name.firstName ? `${client.name.firstName} ${client.name.lastName}` : '';
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString('en-IN');
 
-  const handleDeleteCampaign = async (id: string) => {
+  const handleDelete = async (campaignId: string) => {
     const result = await Swal.fire({
       title: 'Delete Campaign?',
-      text: 'This action cannot be undone.',
+      text: 'This cannot be undone.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Yes, delete it!',
+      confirmButtonText: 'Yes, delete',
       cancelButtonText: 'Cancel',
       reverseButtons: true,
     });
-    if (result.isConfirmed) {
+    if (!result.isConfirmed) return;
+    try {
       const token = localStorage.getItem('token');
-      try {
-        await api.post(
-          '/campaign/delete',
-          { campaignId: id },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setCampaigns(prev => prev.filter(c => c._id !== id));
-        Swal.fire('Deleted!', 'Your campaign has been deleted.', 'success');
-      } catch (err: any) {
-        Swal.fire('Error', err?.response?.data?.message || 'Failed to delete campaign.', 'error');
-      }
+      await api.post('/campaign/delete', { campaignId }, { headers: { Authorization: `Bearer ${token}` } });
+      setCampaigns(prev => prev.filter(c => c.campaignId !== campaignId));
+      Swal.fire('Deleted!', 'Campaign removed.', 'success');
+    } catch (err: any) {
+      Swal.fire('Error', err.response?.data?.message || 'Delete failed.', 'error');
     }
   };
 
@@ -122,29 +115,22 @@ export default function Dashboard() {
     processing: 'bg-blue-400 text-blue-900',
   };
 
-  const submitPasswordUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     const token = localStorage.getItem('token');
     const clientId = localStorage.getItem('clientId');
-    if (!token || !clientId) {
-      Swal.fire('Error', 'Not authenticated.', 'error');
-      return;
-    }
-    if (!passwords.oldPassword || !passwords.newPassword) {
-      Swal.fire('Error', 'Enter both passwords.', 'error');
-      return;
-    }
+    if (!token || !clientId) return;
     try {
       await api.post(
         '/client/updatePassword',
-        { clientId, oldPassword: passwords.oldPassword, newPassword: passwords.newPassword },
+        { clientId, ...passwords },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       Swal.fire('Success', 'Password updated.', 'success');
       setShowPwdForm(false);
       setPasswords({ oldPassword: '', newPassword: '' });
     } catch (err: any) {
-      Swal.fire('Error', err?.response?.data?.message || 'Failed to update.', 'error');
+      Swal.fire('Error', err.response?.data?.message || 'Update failed.', 'error');
     }
   };
 
@@ -152,23 +138,22 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-50">
       <header className="sticky top-0 bg-white shadow-md z-10">
         <div className="container mx-auto p-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center space-x-3">
-            <img src="/logo.png" alt="ShareMitra" className="w-10 h-10 rounded-full" />
+          <Link href="/dashboard" className="flex items-center space-x-3">
+            <img src="/logo.png" alt="Logo" className="w-10 h-10 rounded-full" />
             <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-green-600">
               ShareMitra
             </span>
           </Link>
-
           <div className="flex items-center space-x-4">
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="flex items-center gap-2 cursor-pointer">
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
                   <User className="w-5 h-5" /> {fullName || 'Profile'}
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-80 bg-white flex flex-col">
                 <SheetHeader className="p-4">
-                  <SheetTitle className="text-lg font-semibold">Profile</SheetTitle>
+                  <SheetTitle>Profile</SheetTitle>
                 </SheetHeader>
                 <div className="flex-1 overflow-auto p-4 space-y-4">
                   <div>
@@ -180,11 +165,11 @@ export default function Dashboard() {
                     <Input disabled value={client.email} className="bg-gray-50" />
                   </div>
                   {!showPwdForm ? (
-                    <Button onClick={() => setShowPwdForm(true)} className="w-full bg-emerald-600 text-white cursor-pointer">
+                    <Button onClick={() => setShowPwdForm(true)} className="w-full bg-emerald-600 text-white">
                       Update Password
                     </Button>
                   ) : (
-                    <form onSubmit={submitPasswordUpdate} className="space-y-4">
+                    <form onSubmit={handlePasswordSubmit} className="space-y-4">
                       <div>
                         <Label>Old Password</Label>
                         <Input
@@ -204,10 +189,10 @@ export default function Dashboard() {
                         />
                       </div>
                       <div className="flex gap-2">
-                        <Button type="submit" className="flex-1 bg-emerald-600 text-white cursor-pointer">
+                        <Button type="submit" className="flex-1 bg-emerald-600 text-white">
                           Save
                         </Button>
-                        <Button variant="outline" className="flex-1 cursor-pointer" onClick={() => setShowPwdForm(false)}>
+                        <Button variant="outline" className="flex-1" onClick={() => setShowPwdForm(false)}>
                           Cancel
                         </Button>
                       </div>
@@ -215,14 +200,13 @@ export default function Dashboard() {
                   )}
                 </div>
                 <SheetFooter className="p-4">
-                  <Button variant="destructive" onClick={logout} className="w-full bg-red-600 text-white flex items-center justify-center cursor-pointer">
+                  <Button variant="destructive" onClick={logout} className="w-full">
                     <LogOut className="w-5 h-5 mr-2" /> Logout
                   </Button>
                 </SheetFooter>
               </SheetContent>
             </Sheet>
-
-            <Button variant="destructive" onClick={logout} className="flex items-center gap-2 bg-red-600 text-white cursor-pointer">
+            <Button variant="destructive" onClick={logout} className="flex items-center gap-2 bg-red-600 text-white">
               <LogOut className="w-5 h-5" />
             </Button>
           </div>
@@ -238,13 +222,13 @@ export default function Dashboard() {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold">Your Campaigns</h2>
           <Link href="/dashboard/addCampaign">
-            <Button className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white cursor-pointer hover:from-emerald-700 hover:to-green-700 transition">
+            <Button className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700 transition">
               <Plus className="w-5 h-5" /> New Campaign
             </Button>
           </Link>
         </div>
 
-        {loadingCampaigns ? (
+        {loading ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="h-64 bg-gray-200 rounded-lg animate-pulse"></div>
@@ -255,36 +239,48 @@ export default function Dashboard() {
         ) : (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {campaigns.map(c => (
-              <motion.div key={c._id} whileHover={{ scale: 1.02 }}>
+              <motion.div key={c.campaignId} whileHover={{ scale: 1.02 }}>
                 <Card className="bg-white shadow hover:shadow-lg transition">
                   <CardContent>
-                    <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-start mb-2">
                       <h3 className="text-lg font-medium">{c.serviceHeading}</h3>
                       <Button
                         variant="destructive"
                         size="icon"
-                        onClick={() => handleDeleteCampaign(c.campaignId)}
+                        onClick={() => handleDelete(c.campaignId)}
                         className="p-1 bg-red-600 text-white hover:bg-red-700 cursor-pointer"
                       >
                         <Trash className="w-4 h-4" />
                       </Button>
                     </div>
-                    <p className="truncate mt-2 mb-4">
+                    <p className="truncate mb-4">
                       <span className="font-semibold">Link:</span>{' '}
                       <a href={c.link} target="_blank" rel="noreferrer" className="text-blue-600 underline">
                         {c.link}
                       </a>
                     </p>
-                    <ul className="list-disc list-inside text-sm text-gray-800 mb-4">
-                      {c.actions.map((a, index) => (
-                        <li key={index}>
-                          {a.quantity} × {a.actionType} (@${a.unitCost} ea) = ${a.totalCost}
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="flex justify-between items-center text-sm text-gray-500">
-                      <span>Created on {formatDate(c.createdAt)}</span>
+                    <table className="w-full mb-4 text-sm">
+                      <thead>
+                        <tr className="text-left text-gray-500">
+                          <th className="px-2 py-1">Services</th>
+                          <th className="px-2 py-1">Quantity</th>
+                          <th className="px-2 py-1">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {c.actions.map(action => (
+                          <tr key={action.actionId} className="border-t">
+                            <td className="px-2 py-1">{action.contentKey}</td>
+                            <td className="px-2 py-1">{action.quantity}</td>
+                            <td className="px-2 py-1 font-semibold">${action.totalCost}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="flex justify-end items-center mb-1">
+                      <span className="text-sm font-semibold">Total: ${c.totalAmount}</span>
                     </div>
+                    <p className="text-xs text-black-400">Created on {formatDate(c.createdAt)}</p>
                   </CardContent>
                 </Card>
               </motion.div>
