@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/card';
 import { Play, Instagram, Star, Search, X } from 'lucide-react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 interface ServiceContentItem {
   contentId: string;
@@ -57,7 +57,7 @@ export default function ServicesPage() {
       setError('');
       try {
         const res = await fetch(
-          `${API_BASE}/service/getAll?page=1&limit=100&search=${encodeURIComponent(search)}`
+          `${API_BASE}service/getAll?page=1&limit=100&search=${encodeURIComponent(search)}`
         );
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || 'Failed to load services');

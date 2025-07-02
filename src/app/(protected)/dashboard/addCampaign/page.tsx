@@ -16,7 +16,7 @@ interface ServiceOption {
   serviceContent: ServiceContentItem[];
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const RAZORPAY_KEY = 'rzp_test_2oIQzZ7i0uQ6sn';
 
 export default function CreateCampaign() {
@@ -33,7 +33,7 @@ export default function CreateCampaign() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/service/getAll?page=1&limit=100`);
+        const res = await fetch(`${API_BASE}service/getAll?page=1&limit=100`);
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || 'Failed to load services');
         setServiceOptions(json.data);
@@ -88,7 +88,7 @@ export default function CreateCampaign() {
     try {
       const clientId = localStorage.getItem('clientId');
       if (!clientId) throw new Error('Not authenticated');
-      const orderRes = await fetch(`${API_BASE}/payment/order`, {
+      const orderRes = await fetch(`${API_BASE}payment/order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: totalAmount, clientId, serviceId }),
@@ -105,7 +105,7 @@ export default function CreateCampaign() {
         order_id: orderData.order.id,
         handler: async (resp: any) => {
           try {
-            const verifyRes = await fetch(`${API_BASE}/payment/verify`, {
+            const verifyRes = await fetch(`${API_BASE}payment/verify`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(resp),
@@ -117,7 +117,7 @@ export default function CreateCampaign() {
               .filter(([, qty]) => qty > 0)
               .map(([contentId, qty]) => ({ contentId, quantity: qty }));
 
-            const campRes = await fetch(`${API_BASE}/campaign/create`, {
+            const campRes = await fetch(`${API_BASE}campaign/create`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ clientId, serviceId, link: postLink, actions }),
