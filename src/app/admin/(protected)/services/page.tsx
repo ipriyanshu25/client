@@ -28,9 +28,9 @@ interface Service {
 }
 
 export default function AdminServicesPage() {
-  const [services, setServices]   = useState<Service[]>([]);
-  const [loading,  setLoading]    = useState(true);
-  const [error,    setError]      = useState<string | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   /* ───────────────── Fetch services ───────────────── */
   useEffect(() => {
@@ -74,16 +74,16 @@ export default function AdminServicesPage() {
   };
 
   /* ───────────────── UI ───────────────── */
-  if (loading)   return <p className="p-8 text-center">Loading services…</p>;
-  if (error)     return <p className="p-8 text-center text-red-600">{error}</p>;
+  if (loading) return <p className="p-8 text-center">Loading services…</p>;
+  if (error) return <p className="p-8 text-center text-red-600">{error}</p>;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-50 p-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Services</h1>
+        <h1 className="text-3xl font-bold text-green-900">Services</h1>
 
         <Link href="/admin/services/add-edit-service">
-          <Button className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+          <Button className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg shadow">
             <Plus className="w-4 h-4" /> Add Service
           </Button>
         </Link>
@@ -96,16 +96,16 @@ export default function AdminServicesPage() {
           {services.map((svc) => (
             <Card
               key={svc.serviceId}
-              className="hover:shadow-xl transition-shadow group"
+              className="bg-white border border-gray-200 rounded-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
             >
-              <CardHeader>
-                <CardTitle className="flex items-start justify-between">
-                  <span>{svc.serviceHeading}</span>
+              <CardHeader className="border-b border-gray-100 pb-4 mb-4">
+                <CardTitle className="flex items-center justify-between">
+                  <span className="text-lg font-semibold text-gray-800">{svc.serviceHeading}</span>
                   <Badge className="bg-emerald-100 text-emerald-800">
                     {svc.serviceContent.length}
                   </Badge>
                 </CardTitle>
-                <CardDescription className="line-clamp-2">
+                <CardDescription className="text-gray-600 line-clamp-2">
                   {svc.serviceDescription}
                 </CardDescription>
               </CardHeader>
@@ -115,10 +115,10 @@ export default function AdminServicesPage() {
                   {svc.serviceContent.map((itm) => (
                     <li
                       key={itm.key}
-                      className="flex justify-between text-sm bg-gray-50 rounded px-3 py-1"
+                      className="flex justify-between text-sm bg-gray-50 hover:bg-gray-100 rounded px-4 py-2 transition"
                     >
-                      <span>{itm.key}</span>
-                      <span className="font-medium text-emerald-600">
+                      <span className="font-medium text-gray-700">{itm.key}</span>
+                      <span className="font-semibold text-emerald-600">
                         ${itm.value}
                       </span>
                     </li>
@@ -132,14 +132,18 @@ export default function AdminServicesPage() {
                       query: { serviceId: svc.serviceId },
                     }}
                   >
-                    <Button variant="outline" size="sm" className="gap-1 bg-rose-600 hover:bg-rose-700 text-white shadow-sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1 border-emerald-600 text-emerald-600 hover:bg-emerald-600 hover:text-white"
+                    >
                       <Pencil className="w-4 h-4" /> Edit
                     </Button>
                   </Link>
                   <Button
                     variant="destructive"
                     size="sm"
-                    className="gap-1 bg-rose-600 hover:bg-rose-700 text-white shadow-sm"
+                    className="flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white"
                     onClick={() => handleDelete(svc.serviceId)}
                   >
                     <Trash className="w-4 h-4" /> Delete

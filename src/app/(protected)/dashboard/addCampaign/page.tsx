@@ -154,24 +154,24 @@ export default function CreateCampaign() {
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-50">
       <header className="sticky top-0 z-50 border-b border-white/20 bg-white/70 backdrop-blur-lg shadow-sm">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => router.push('/')}>
             <img src="/logo.png" className="w-9 h-9 rounded-full" alt="Logo" />
-            <span className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent animate-pulse">
+            <span className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
               ShareMitra
             </span>
           </div>
           <div className="flex items-center space-x-3">
-            <button onClick={() => router.push('/dashboard')} className="text-gray-700 hover:text-emerald-600 font-medium">
+            <button onClick={() => router.push('/dashboard')} className="text-gray-700 font-medium cursor-pointer border-2 rounded-md px-4 py-2 transition-colors duration-200 bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700">
               Dashboard
             </button>
-            <button onClick={() => router.push('/services')} className="text-gray-700 hover:text-emerald-600 font-medium">
+            <button onClick={() => router.push('/services')} className="text-gray-700 font-medium cursor-pointer border-2 rounded-md px-4 py-2 transition-colors duration-200 bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700">
               Services
             </button>
           </div>
         </div>
       </header>
 
-      <main className="flex-grow container mx-auto px-4 py-12">
+      <main className="flex-grow container mx-auto px-4 py-12">   
         <Card className="mx-auto max-w-3xl rounded-2xl bg-white ring-1 ring-emerald-200/60 shadow-xl p-8 md:p-12">
           <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
             Create New Campaign
@@ -217,7 +217,7 @@ export default function CreateCampaign() {
                 <div key={item.contentId} className="flex items-center justify-between p-4 border border-emerald-200 rounded-md">
                   <div className="flex flex-col">
                     <span className="text-gray-900 text-lg">{item.key}</span>
-                    <span className="text-gray-500 text-sm">${item.value} each</span>
+                    <span className="text-gray-500 text-sm">{item.value}$ per {item.key}</span>
                   </div>
                   <input
                     type="number"
@@ -249,59 +249,10 @@ export default function CreateCampaign() {
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-gray-900 text-white pt-12 pb-8 mt-auto">
-        <div className="container mx-auto px-4 grid md:grid-cols-4 gap-8 cursor-pointer">
-          <div>
-            <div className="flex items-center space-x-3 mb-4">
-              <img src="/logo.png" className="w-8 h-8 rounded-full" />
-              <span className="text-xl font-bold">ShareMitra</span>
-            </div>
-            <p className="text-gray-400">
-              The #1 platform for social media engagement services.
-            </p>
-          </div>
-          {[
-            {
-              title: 'Services',
-              items: [
-                'YouTube Promotion',
-                'Instagram Growth',
-                'Likes & Comments',
-                'Custom Packages',
-              ],
-            },
-            {
-              title: 'Company',
-              items: [
-                'About Us',
-                'Contact',
-                'Privacy Policy',
-                'Terms of Service',
-              ],
-            },
-            {
-              title: 'Support',
-              items: ['Help Center', 'FAQ', 'Live Chat', 'Email Support'],
-            },
-          ].map((col) => (
-            <div key={col.title}>
-              <h4 className="font-semibold mb-4">{col.title}</h4>
-              <ul className="space-y-2 text-gray-400">
-                {col.items.map((it) => (
-                  <li
-                    key={it}
-                    className="hover:text-emerald-400 transition-colors"
-                  >
-                    {it}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-          <div className="col-span-full border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
+      <footer className="bg-gray-900 text-white pb-8 mt-auto">
+          <div className="col-span-full border-t border-gray-800 pt-8 text-center text-gray-400">
             &copy; {new Date().getFullYear()} ShareMitra. All rights reserved.
           </div>
-        </div>
       </footer>
     </div>
   );

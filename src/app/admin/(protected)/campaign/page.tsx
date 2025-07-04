@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Trash } from 'lucide-react';
 
 interface CampaignAction {
-  actionId: string;
+  contentId: string;
   contentKey: string;
   quantity: number;
   totalCost: number;
@@ -171,7 +171,7 @@ try {
                   </thead>
                   <tbody>
                     {c.actions.map((a) => (
-                      <tr key={a.actionId} className="bg-gray-50">
+                      <tr key={a.contentId} className="bg-gray-50">
                         <td>{a.contentKey}</td>
                         <td className="text-center">{a.quantity}</td>
                         <td className="text-right">{a.totalCost}</td>

@@ -1,26 +1,21 @@
 'use client';
 
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
+import Swal, { SweetAlertOptions } from 'sweetalert2';
 import {
   Play,
   Instagram,
-  Heart,
-  MessageCircle,
-  Reply,
   CheckCircle,
-  Shield,
-  Users,
-  ArrowRight,
-  TrendingUp,
   Globe,
   User,
   LogOut,
   LogIn,
-  Plus,
-  Trash,
+  ArrowRight,
+  Shield,
+  TrendingUp,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -39,20 +34,49 @@ import {
   SheetTitle,
   SheetFooter,
 } from '@/components/ui/sheet';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
+// Configure axios base URL without trailing slash
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, ''),
 });
+
+interface ServiceContent {
+  contentId?: string;
+  key: string;
+  value: string;
+}
+
+interface Service {
+  serviceId: string;
+  serviceHeading: string;
+  serviceDescription: string;
+  serviceContent: ServiceContent[];
+  logo?: string; // Base64 without data prefix
+}
 
 export default function Home() {
   const router = useRouter();
-  const [client, setClient] = useState<{ name: { firstName: string; lastName: string }; email: string }>({ name: { firstName: '', lastName: '' }, email: '' });
+  const [client, setClient] = useState<{ name: { firstName: string; lastName: string }; email: string }>({
+    name: { firstName: '', lastName: '' },
+    email: '',
+  });
+  const [services, setServices] = useState<Service[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [showPwdForm, setShowPwdForm] = useState(false);
-  const [passwords, setPasswords] = useState({ oldPassword: '', newPassword: '' });
 
+  // Email update states
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [showEmailOtpForm, setShowEmailOtpForm] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailOtp, setEmailOtp] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+
+  // helper for auto-close toasts
+  const toast = (opts: SweetAlertOptions) =>
+    Swal.fire({ ...opts, showConfirmButton: false, timer: 2000, timerProgressBar: true });
+
+  // fetch user profile
   useEffect(() => {
     const token = localStorage.getItem('token');
     const clientId = localStorage.getItem('clientId');
@@ -63,7 +87,18 @@ export default function Home() {
         { clientId },
         { headers: { Authorization: `Bearer ${token}` } }
       )
-      .then((res) => setClient(res.data))
+      .then(res => {
+        setClient(res.data);
+        setNewEmail(res.data.email);
+      })
+      .catch(console.error);
+  }, []);
+
+  // fetch first page of services
+  useEffect(() => {
+    api
+      .get<{ data: Service[] }>('/service/getAll?page=1&limit=4')
+      .then(res => setServices(res.data.data))
       .catch(console.error);
   }, []);
 
@@ -83,50 +118,58 @@ export default function Home() {
     router.refresh();
   };
 
-  const submitPasswordUpdate = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const token = localStorage.getItem('token');
-    const clientId = localStorage.getItem('clientId');
-    if (!token || !clientId) return;
+  // Handle OTP generation
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSendingOtp(true);
     try {
+      const token = localStorage.getItem('token');
+      const clientId = localStorage.getItem('clientId');
       await api.post(
-        '/client/update',
-        { clientId, ...passwords },
+        '/client/generateEmailOtp',
+        { clientId, newEmail },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert('Password updated successfully.');
-      setShowPwdForm(false);
-      setPasswords({ oldPassword: '', newPassword: '' });
-    } catch (error: any) {
-      alert(error?.response?.data?.message || 'Failed to update password.');
+      toast({ title: 'OTP Sent', text: 'Check your new email for the OTP.', icon: 'info' });
+      setShowEmailOtpForm(true);
+    } catch (err: any) {
+      toast({ title: 'Error', text: err.response?.data?.message || 'Failed to send OTP.', icon: 'error' });
+    } finally {
+      setIsSendingOtp(false);
     }
   };
 
-  const packages = [
-    {
-      id: 'basic',
-      name: 'Basic',
-      price: '$29',
-      features: ['1000 Likes', '50 Comments', '24h Delivery', 'Basic Support'],
-    },
-    {
-      id: 'premium',
-      name: 'Premium',
-      price: '$79',
-      features: ['5000 Likes', '200 Comments', '100 Replies', '12h Delivery', 'Priority Support'],
-    },
-    {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: '$199',
-      features: ['Unlimited Likes', '1000 Comments', '500 Replies', '6h Delivery', '24/7 Support', 'Custom Strategy'],
-    },
-  ];
+  // Handle OTP verification
+  const handleEmailOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      const clientId = localStorage.getItem('clientId');
+      const res = await api.post<{ email: string }>(
+        '/client/verifyEmailOtp',
+        { clientId, otp: emailOtp },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setClient(prev => ({ ...prev, email: res.data.email }));
+      toast({ title: 'Success', text: 'Email updated successfully.', icon: 'success' });
+      setShowEmailForm(false);
+      setShowEmailOtpForm(false);
+    } catch (err: any) {
+      toast({ title: 'Error', text: err.response?.data?.message || 'OTP verification failed.', icon: 'error' });
+    }
+  };
 
-  function handleStartCampaign(event: React.MouseEvent<HTMLButtonElement>): void {
-    event.preventDefault();
-    goToCampaign();
-  }
+  // Render logo or icon
+  const renderIconOrLogo = (svc: Service) => {
+    if (svc.logo) {
+      const src = svc.logo.startsWith('data:') ? svc.logo : `data:image/png;base64,${svc.logo}`;
+      return <img src={src} alt={svc.serviceHeading} className="w-16 h-16 rounded-full object-cover" />;
+    }
+    const h = svc.serviceHeading.toLowerCase();
+    if (h.includes('youtube')) return <Play className="h-8 w-8 text-red-600" />;
+    if (h.includes('instagram')) return <Instagram className="h-8 w-8 text-pink-600" />;
+    return <Globe className="h-8 w-8 text-emerald-600" />;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-50">
@@ -137,7 +180,7 @@ export default function Home() {
             <div className="w-10 h-10 rounded-full overflow-hidden">
               <img src="/logo.png" alt="ShareMitra Logo" className="w-full h-full object-cover" />
             </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent animate-pulse">
+            <span className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
               ShareMitra
             </span>
           </Link>
@@ -146,15 +189,15 @@ export default function Home() {
             {isLoggedIn ? (
               <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2 bg-white text-gray-800">
+                  <Button variant="outline" size="sm" className="gap-2 bg-white text-gray-800 hover:bg-gray-100 cursor-pointer">
                     <User className="h-4 w-4" /> {fullName}
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-[320px] sm:w-[380px] flex flex-col bg-white">
+                <SheetContent side="right" className="w-[320px] sm:w-[380px] bg-white flex flex-col">
                   <SheetHeader className="p-4">
                     <SheetTitle className="text-lg font-semibold">Profile</SheetTitle>
                   </SheetHeader>
-                  <div className="flex-1 overflow-auto p-4 space-y-6">
+                  <div className="flex-1 overflow-auto p-4 space-y-4">
                     <div>
                       <Label>Name</Label>
                       <Input disabled value={fullName} className="bg-gray-50" />
@@ -163,29 +206,44 @@ export default function Home() {
                       <Label>Email</Label>
                       <Input disabled value={client.email} className="bg-gray-50" />
                     </div>
-                    {!showPwdForm ? (
-                      <Button onClick={() => setShowPwdForm(true)} className="w-full bg-emerald-600 text-white cursor-pointer">
-                        Update Password
+                    {!showEmailForm ? (
+                      <Button onClick={() => setShowEmailForm(true)} className="w-full bg-emerald-600 text-white cursor-pointer hover:bg-emerald-700">
+                        Update Email
                       </Button>
-                    ) : (
-                      <form onSubmit={submitPasswordUpdate} className="space-y-4">
+                    ) : !showEmailOtpForm ? (
+                      <form onSubmit={handleEmailSubmit} className="space-y-4">
                         <div>
-                          <Label>Old Password</Label>
-                          <Input type="password" required value={passwords.oldPassword} onChange={e => setPasswords(prev => ({ ...prev, oldPassword: e.target.value }))} />
-                        </div>
-                        <div>
-                          <Label>New Password</Label>
-                          <Input type="password" required value={passwords.newPassword} onChange={e => setPasswords(prev => ({ ...prev, newPassword: e.target.value }))} />
+                          <Label>New Email</Label>
+                          <Input type="email" required value={newEmail} onChange={e => setNewEmail(e.target.value)} />
                         </div>
                         <div className="flex gap-2">
-                          <Button type="submit" className="flex-1 bg-emerald-600 text-white">Save</Button>
-                          <Button variant="outline" className="flex-1" onClick={() => setShowPwdForm(false)}>Cancel</Button>
+                          <Button type="submit" disabled={isSendingOtp} className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 cursor-pointer">
+                            {isSendingOtp ? 'Sending…' : 'Send OTP'}
+                          </Button>
+                          <Button variant="outline" className="flex-1 bg-red-600 text-white hover:bg-red-700 cursor-pointer" onClick={() => { setShowEmailForm(false); setEmailOtp(''); }}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    ) : (
+                      <form onSubmit={handleEmailOtpSubmit} className="space-y-4">
+                        <div>
+                          <Label>Enter OTP</	Label>
+                          <Input type="text" required value={emailOtp} onChange={e => setEmailOtp(e.target.value)} />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button type="submit" className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer">
+                            Verify OTP
+                          </Button>
+                          <Button variant="outline" className="flex-1 bg-red-600 text-white hover:bg-red-700 cursor-pointer" onClick={() => { setShowEmailForm(false); setShowEmailOtpForm(false); setEmailOtp(''); }}>
+                            Cancel
+                          </Button>
                         </div>
                       </form>
                     )}
                   </div>
                   <SheetFooter className="p-4">
-                    <Button variant="destructive" onClick={logout} className="w-full bg-red-600 text-white cursor-pointer">
+                    <Button variant="destructive" onClick={logout} className="w-full bg-red-600 text-white hover:bg-red-700 cursor-pointer">
                       <LogOut className="h-4 w-4 mr-2" /> Logout
                     </Button>
                   </SheetFooter>
@@ -193,14 +251,14 @@ export default function Home() {
               </Sheet>
             ) : (
               <Link href="/login">
-                <Button variant="outline" size="sm" className="bg-gradient-to-r from-emerald-600 to-green-600 text-white gap-2 cursor-pointer">
+                <Button variant="outline" size="sm" className="bg-gradient-to-r from-emerald-600 to-green-600 text-white gap-2 hover:from-emerald-700 hover:to-green-700 cursor-pointer">
                   <LogIn className="h-4 w-4" /> Login
                 </Button>
               </Link>
             )}
 
             <Link href="/services">
-              <Button variant="outline" size="sm" className="bg-gradient-to-r from-emerald-600 to-pink-600 text-white gap-2 cursor-pointer">
+              <Button variant="outline" size="sm" className="bg-emerald-600 to-pink-600 text-white gap-2 hover:from-emerald-700 hover:to-pink-700 cursor-pointer">
                 Services
               </Button>
             </Link>
@@ -209,31 +267,26 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 lg:py-32">
+      <section className="relative overflow-hidden py-20 lg:py-32 text-center">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 to-green-600/10" />
-        <div className="container relative mx-auto px-4 text-center">
-          <div className="mx-auto max-w-4xl">
-            <h1 className="mb-6 text-5xl font-bold leading-tight text-gray-900 lg:text-7xl">
-              Boost Your Social Media
-              <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
-                {' '}Engagement
-              </span>
-            </h1>
-            <p className="mb-8 text-xl text-gray-600 lg:text-2xl">
-              Get 100% real human likes, comments, and replies on YouTube and Instagram.
-              Grow your audience with our premium engagement services.
-            </p>
-            <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
-              <Button
-                size="lg"
-                onClick={handleStartCampaign}
-                className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white px-8 py-4 text-lg"
-              >
-                Start Your Campaign
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </div>
-          </div>
+        <div className="container relative mx-auto px-4">
+          <h1 className="mb-6 text-5xl font-bold text-gray-900 lg:text-7xl">
+            Boost Your Social Media{' '}
+            <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+              Engagement
+            </span>
+          </h1>
+          <p className="mb-8 text-xl text-gray-600 lg:text-2xl">
+            Get 100% real human likes, comments, and replies on YouTube and Instagram. Grow your audience with our premium engagement services.
+          </p>
+          <Button
+            size="lg"
+            onClick={goToCampaign}
+            className="bg-gradient-to-r from-emerald-600 to-green-600 px-8 py-4 text-lg text-white hover:from-emerald-700 hover:to-green-700 cursor-pointer"
+          >
+            Start Your Campaign
+            <ArrowRight className="ml-2 h-৫ w-৫" />
+          </Button>
         </div>
       </section>
 
@@ -241,76 +294,56 @@ export default function Home() {
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Our Services
-            </h2>
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Our Services</h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Comprehensive engagement solutions for your Social Media Handle
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <Card className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
-              <CardHeader className="text-center pb-4">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
-                  <Play className="h-8 w-8 text-red-600" />
-                </div>
-                <CardTitle className="text-2xl">YouTube Services</CardTitle>
-                <CardDescription>Boost your YouTube videos with real engagement</CardDescription>
-              </CardHeader>
-              {/* Make this a flex‐column and center everything */}
-              <CardContent className="flex flex-col items-center space-y-4">
-                <div className="flex justify-center items-center space-x-3">
-                  <Heart className="h-5 w-5 text-red-500" />
-                  <span>YouTube Likes</span>
-                </div>
-                <div className="flex justify-center items-center space-x-3">
-                  <MessageCircle className="h-5 w-5 text-emerald-500" />
-                  <span>YouTube Comments</span>
-                </div>
-                <div className="flex justify-center items-center space-x-3">
-                  <Reply className="h-5 w-5 text-green-500" />
-                  <span>Comment Replies</span>
-                </div>
-                <div className="flex justify-center items-center space-x-3">
-                  <Users className="h-5 w-5 text-emerald-600" />
-                  <span>Subscriber Growth</span>
-                </div>
-              </CardContent>
-            </Card>
+            {services.map(service => (
+              <Card key={service.serviceId} className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 rounded-2xl">
+                <CardHeader className="text-center pb-4">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-emerald-100 flex items-center justify-center rounded-full group-hover:bg-emerald-200 transition-colors">
+                    {renderIconOrLogo(service)}
+                  </div>
+                  <CardTitle className="text-2xl font-semibold text-gray-900">
+                    {service.serviceHeading}
+                  </CardTitle>
+                  <CardDescription className="text-gray-600">
+                    {service.serviceDescription}
+                  </CardDescription>
+                </CardHeader>
 
-            <Card className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
-              <CardHeader className="text-center pb-4">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-pink-100 flex items-center justify-center group-hover:bg-pink-200 transition-colors">
-                  <Instagram className="h-8 w-8 text-pink-600" />
-                </div>
-                <CardTitle className="text-2xl">Instagram Services</CardTitle>
-                <CardDescription>Increase your Instagram post engagement</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <Heart className="h-5 w-5 text-red-500" />
-                    <span>Instagram Likes</span>
+                <CardContent className="flex flex-col items-center space-y-3">
+                  {service.serviceContent.map(item => (
+                    <div key={item.contentId || item.key} className="flex items-center space-x-3">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <span>{item.key}: {item.value}$</span>
+                    </div>
+                  ))}
+                  <div className="mt-4">
+                    <Link href={isLoggedIn ? '/dashboard' : '/login'}>
+                      <Button className="bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700 cursor-pointer">
+                        Create Campaign
+                      </Button>
+                    </Link>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <MessageCircle className="h-5 w-5 text-emerald-500" />
-                    <span>Instagram Comments</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Reply className="h-5 w-5 text-green-500" />
-                    <span>Comment Replies</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Users className="h-5 w-5 text-emerald-600" />
-                    <span>Follower Growth</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="text-center mt-8">
+            <Link href="/services">
+              <Button size="lg" className="bg-gradient-to-r from-emerald-600 to-green-600 rounded-md px-6 py-3 text-white cursor-pointer hover:from-emerald-700 hover:to-green-700">
+                View More Services
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
+
 
       {/* How It Works */}
       <section className="py-20 bg-gradient-to-r from-emerald-50 to-green-50">
@@ -350,52 +383,6 @@ export default function Home() {
               <h3 className="text-xl font-semibold mb-4">24-Hr Watch It Grow</h3>
               <p className="text-gray-600">Sit back and watch your content receive real engagement from our network within 1–24 hours.</p>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Choose Your Service
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Flexible pricing options for every budget and goal
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {packages.map((pkg, index) => (
-              <Card key={pkg.id} className={`relative ${index === 1 ? 'ring-2 ring-emerald-500 scale-105' : ''} hover:shadow-xl transition-all`}>
-                {index === 1 && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <div className="bg-emerald-500 text-white px-3 py-1 rounded-full text-sm font-medium">Most Popular</div>
-                  </div>
-                )}
-                <CardHeader className="text-center">
-                  <CardTitle className="text-2xl">{pkg.name}</CardTitle>
-                  <div className="text-4xl font-bold text-emerald-600">{pkg.price}</div>
-                  <CardDescription>per campaign</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {pkg.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-center space-x-3">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Link href="/register">
-                    <Button className="w-full mt-6 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700">
-                      Get Started
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
           </div>
         </div>
       </section>
@@ -452,7 +439,7 @@ export default function Home() {
             onClick={goToCampaign}
             size="lg"
             variant="secondary"
-            className="px-8 py-4 text-lg"
+            className="px-8 py-4 text-lg cursor-pointer bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800 text-white"
           >
             Start Your Campaign
             <ArrowRight className="ml-2 h-5 w-5" />
@@ -493,11 +480,11 @@ export default function Home() {
 
             <div>
               <h4 className="font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li>About Us</li>
-                <li>Contact</li>
-                <li>Privacy Policy</li>
-                <li>Terms of Service</li>
+              <ul className="space-y-2 text-gray-400 ">
+                <li className='cursor-pointer' onClick={() => router.push('/about')}>About Us</li>
+                <li className='cursor-pointer' onClick={()=> router.push('/contactus')}>Contact</li>
+                <li className='cursor-pointer'>Privacy Policy</li>
+                <li className='cursor-pointer'> Terms of Service</li>
               </ul>
             </div>
 
@@ -506,8 +493,6 @@ export default function Home() {
               <ul className="space-y-2 text-gray-400">
                 <li>Help Center</li>
                 <li>FAQ</li>
-                <li>Live Chat</li>
-                <li>Email Support</li>
               </ul>
             </div>
           </div>
@@ -520,3 +505,4 @@ export default function Home() {
     </div>
   );
 }
+

@@ -98,6 +98,7 @@ export default function AdminLoginPage() {
                             required
                             placeholder="you@example.com"
                             value={email}
+                            className='mt-2'
                             onChange={e => setEmail(e.target.value)}
                         />
                     </div>
@@ -110,6 +111,7 @@ export default function AdminLoginPage() {
                             required
                             placeholder="••••••••"
                             value={password}
+                            className='mt-2'
                             onChange={e => setPassword(e.target.value)}
                         />
                     </div>
