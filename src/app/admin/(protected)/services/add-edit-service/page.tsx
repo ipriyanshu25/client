@@ -197,7 +197,7 @@ export default function AddEditServicePage() {
           {contents.map((item, idx) => (
             <div key={idx} className="flex items-center space-x-2 mb-2">
               <Input
-                placeholder="Key"
+                placeholder="Title"
                 value={item.key}
                 onChange={e => {
                   const v = e.target.value;

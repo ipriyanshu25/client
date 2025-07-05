@@ -471,10 +471,10 @@ export default function Home() {
             <div>
               <h4 className="font-semibold mb-4">Services</h4>
               <ul className="space-y-2 text-gray-400">
-                <li>YouTube Promotion</li>
-                <li>Instagram Growth</li>
-                <li>Likes & Comments</li>
-                <li>Custom Packages</li>
+                <li className='cursor-pointer' onClick={() => router.push('/dashboard')}>YouTube Promotion</li>
+                <li className='cursor-pointer' onClick={() => router.push('/dashboard')}>Instagram Growth</li>
+                <li className='cursor-pointer' onClick={() => router.push('/dashboard')}>Likes & Comments</li>
+                <li className='cursor-pointer' onClick={() => router.push('/dashboard')}>Custom Packages</li>
               </ul>
             </div>
 
@@ -483,16 +483,19 @@ export default function Home() {
               <ul className="space-y-2 text-gray-400 ">
                 <li className='cursor-pointer' onClick={() => router.push('/about')}>About Us</li>
                 <li className='cursor-pointer' onClick={()=> router.push('/contactus')}>Contact</li>
-                <li className='cursor-pointer'>Privacy Policy</li>
-                <li className='cursor-pointer'> Terms of Service</li>
+                <li>FAQ</li>
+                
               </ul>
             </div>
 
             <div>
-              <h4 className="font-semibold mb-4">Support</h4>
+              <h4 className="font-semibold mb-4">Useful Links</h4>
               <ul className="space-y-2 text-gray-400">
-                <li>Help Center</li>
-                <li>FAQ</li>
+                <li className='cursor-pointer' onClick={() => router.push('/usefullLinks/termofuse')}>Terms of Use</li>
+                <li className='cursor-pointer' onClick={() => router.push('/usefullLinks/shiping')}>Shipping & Delivery Policy</li>
+                <li className='cursor-pointer' onClick={() => router.push('/usefullLinks/privacypolicy')}>Privacy Policy</li>
+                <li className='cursor-pointer' onClick={() => router.push('/usefullLinks/returnpolicy')}>Returns Policy</li>
+                <li className='cursor-pointer' onClick={() => router.push('/usefullLinks/cookiepolicy')}>Cookie Policy</li>
               </ul>
             </div>
           </div>

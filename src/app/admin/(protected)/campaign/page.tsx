@@ -1,17 +1,12 @@
-/* app/admin/campaign/page.tsx */
+// Updated: app/admin/campaign/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Trash } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search } from 'lucide-react';
 
 interface CampaignAction {
   contentId: string;
@@ -34,14 +29,16 @@ export default function AdminCampaignPage() {
   const router = useRouter();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  /* ───────────────── Redirect if not admin ───────────────── */
   useEffect(() => {
-    const adminId = localStorage.getItem('adminId');
-    if (!adminId) router.push('/admin/login');
+    if (!localStorage.getItem('adminId')) {
+      router.push('/admin/login');
+    }
   }, [router]);
 
-  /* ───────────────── Fetch campaigns ───────────────── */
   useEffect(() => {
     (async () => {
       try {
@@ -58,48 +55,6 @@ export default function AdminCampaignPage() {
     })();
   }, []);
 
-  /* ───────────────── Delete ───────────────── */
-  const handleDelete = async (campaignId: string) => {
-    const res = await Swal.fire({
-      title: 'Delete this campaign?',
-      text: 'This action cannot be undone.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, delete',
-      cancelButtonText: 'Cancel',
-      reverseButtons: true,
-    });
-    if (!res.isConfirmed) return;
-
-    try {
-      await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}campaign/delete`,
-        { campaignId }
-      );
-try {
-        const { data } = await axios.get<{ campaigns: Campaign[] }>(
-          `${process.env.NEXT_PUBLIC_API_URL}campaign/getAll`
-        );
-        setCampaigns(data.campaigns);
-      } catch (err) {
-        console.error(err);
-        Swal.fire('Error', 'Failed to load campaigns', 'error');
-      } finally {
-        setLoading(false);
-      }
-      Swal.fire('Deleted!', 'Campaign removed.', 'success');
-    } catch (err: any) {
-      Swal.fire('Error', err.response?.data?.message || 'Delete failed', 'error');
-    }
-  };
-
-  /* ───────────────── Helpers ───────────────── */
-  const statusColor: Record<string, string> = {
-    pending: 'bg-amber-400 text-amber-900',
-    completed: 'bg-emerald-500 text-emerald-900',
-    processing: 'bg-blue-400 text-blue-900',
-    failed: 'bg-rose-500 text-rose-900',
-  };
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString('en-IN', {
       day: 'numeric',
@@ -107,92 +62,147 @@ try {
       year: 'numeric',
     });
 
-  /* ───────────────── UI ───────────────── */
+  const toggleExpand = (id: string) => {
+    setExpandedId(prev => (prev === id ? null : id));
+  };
+
+  // Filter campaigns by index or text
+  const filtered = campaigns.filter((c, idx) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.trim();
+    if (/^\d+$/.test(q)) {
+      return idx + 1 === parseInt(q, 10);
+    }
+    const lower = q.toLowerCase();
+    return (
+      c.clientName.firstName.toLowerCase().includes(lower) ||
+      c.clientName.lastName.toLowerCase().includes(lower) ||
+      c.serviceHeading.toLowerCase().includes(lower)
+    );
+  });
+
   if (loading) {
     return (
-      <div className="p-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-64 bg-gray-200 rounded-lg animate-pulse" />
-        ))}
+      <div className="p-8">
+        <p>Loading campaigns...</p>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-50 p-8">
-      <h1 className="text-3xl font-bold mb-8">All Campaigns</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-3xl font-bold text-emerald-700">All Campaigns</h1>
+        <Button
+          size="icon"
+          variant="outline"
+          onClick={() => setShowSearch(prev => !prev)}
+          aria-label="Toggle search"
+          className="h-8 w-8 p-0 text-emerald-600 cursor-pointer hover:bg-emerald-100 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+        >
+          <Search className="h-4 w-4" />
+        </Button>
+      </div>
 
-      {campaigns.length === 0 ? (
+      {showSearch && (
+        <div className="mb-6">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search"
+            className="w-full max-w-sm p-2 border rounded-md"
+          />
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
         <p className="text-center text-gray-500">No campaigns found.</p>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {campaigns.map((c) => (
-            <Card key={c.campaignId} className="bg-white shadow hover:shadow-lg transition">
-              <CardContent className="p-5 space-y-4">
-                {/* Heading + delete */}
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-lg font-medium">{c.serviceHeading}</h3>
-                    <p className="text-sm text-gray-600">
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white shadow-md rounded-lg">
+            <thead className="bg-emerald-600 text-white">
+              <tr>
+                <th className="py-3 px-6 text-left">#</th>
+                <th className="py-3 px-6 text-left">Name</th>
+                <th className="py-3 px-6 text-left">Service</th>
+                <th className="py-3 px-6 text-left">URL</th>
+                <th className="py-3 px-6 text-right">Total ($)</th>
+                <th className="py-3 px-6 text-left">Created On</th>
+                <th className="py-3 px-6 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((c, i) => (
+                <React.Fragment key={c.campaignId}>
+                  <tr className="border-b hover:bg-gray-50">
+                    <td className="py-4 px-6">{i + 1}</td>
+                    <td className="py-4 px-6">
                       {c.clientName.firstName} {c.clientName.lastName}
-                    </p>
-                  </div>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() => handleDelete(c.campaignId)}
-                    className="h-8 w-8 p-0 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-800 transition-colors"
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Link */}
-                <p className="truncate text-sm">
-                  <span className="font-semibold">Post&nbsp;: </span>
-                  <a
-                    href={c.link}
-                    className="text-blue-600 underline"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {c.link}
-                  </a>
-                </p>
-
-                {/* Actions table */}
-                <table className="w-full text-sm border-separate border-spacing-y-1">
-                  <thead>
-                    <tr className="text-left text-gray-500">
-                      <th>Action</th>
-                      <th className="text-center">Qty</th>
-                      <th className="text-right">Total&nbsp;($)</th>
+                    </td>
+                    <td className="py-4 px-6">{c.serviceHeading}</td>
+                    <td className="py-4 px-6 truncate max-w-xs">
+                      <a
+                        href={c.link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-600 underline"
+                      >
+                        {c.link}
+                      </a>
+                    </td>
+                    <td className="py-4 px-6 text-right">${c.totalAmount}</td>
+                    <td className="py-4 px-6">{formatDate(c.createdAt)}</td>
+                    <td className="py-4 px-6 text-center">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={() => toggleExpand(c.campaignId)}
+                        className="h-8 w-8 p-0 bg-blue-50 hover:bg-blue-100 text-blue-600"
+                      >
+                        {expandedId === c.campaignId ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </td>
+                  </tr>
+                  {expandedId === c.campaignId && (
+                    <tr>
+                      <td colSpan={7} className="bg-gray-50 px-6 py-4">
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full text-sm">
+                            <thead>
+                              <tr className="text-left text-gray-500">
+                                <th className="py-2">Action</th>
+                                <th className="py-2 text-center">Qty</th>
+                                <th className="py-2 text-right">Total ($)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {c.actions.map(a => (
+                                <tr
+                                  key={`${c.campaignId}-${a.contentId}`}
+                                  className="border-t"
+                                >
+                                  <td className="py-2">{a.contentKey}</td>
+                                  <td className="py-2 text-center">{a.quantity}</td>
+                                  <td className="py-2 text-right">
+                                    ${a.totalCost}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {c.actions.map((a) => (
-                      <tr key={a.contentId} className="bg-gray-50">
-                        <td>{a.contentKey}</td>
-                        <td className="text-center">{a.quantity}</td>
-                        <td className="text-right">{a.totalCost}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {/* Footer */}
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold">Grand Total: ${c.totalAmount}</span>
-                  {/* <Badge className={statusColor[c.status.toLowerCase()] || ''}>
-                    {c.status}
-                  </Badge> */}
-                </div>
-                <p className="text-xs text-gray-500">
-                  Created&nbsp;on&nbsp;{formatDate(c.createdAt)}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+                  )}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

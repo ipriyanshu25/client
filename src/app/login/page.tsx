@@ -2,12 +2,13 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import Link from 'next/link';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { post } from '@/lib/api';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import Swal from 'sweetalert2';
 
 interface RegisterData {
@@ -52,7 +53,6 @@ export default function ClientAuthPage() {
     }
   }, [router]);
 
-  // Handlers for inputs
   const handleRegisterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setRegisterData(prev => ({ ...prev, [name]: value }));
@@ -66,13 +66,12 @@ export default function ClientAuthPage() {
     setOtpData(prev => ({ ...prev, otp: e.target.value }));
   };
 
-  // 1️⃣ Collect step: send OTP (with reCAPTCHA)
+  // 1️⃣ Collect step: send OTP
   const handleCollectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
     try {
-      // run invisible reCAPTCHA
       const captchaToken = await recaptchaRef.current?.executeAsync();
       recaptchaRef.current?.reset();
 
@@ -88,18 +87,28 @@ export default function ClientAuthPage() {
 
       await post(url, payload);
 
-      Swal.fire(
-        'OTP Sent',
-        authType === 'register'
-          ? 'Check your email for the verification code to complete registration.'
-          : 'Check your email for the verification code to login.',
-        'success'
-      );
+      Swal.fire({
+        title: 'OTP Sent',
+        text:
+          authType === 'register'
+            ? 'Check your email for the verification code to complete registration.'
+            : 'Check your email for the verification code to login.',
+        icon: 'success',
+        showConfirmButton: false,
+        timer: 2000,
+      });
+
       setOtpData({ email: payload.email, otp: '' });
       setMode('verify');
     } catch (err: any) {
       const msg = err.response?.data?.message ?? err.message ?? 'Error sending OTP';
-      Swal.fire('Error', msg, 'error');
+      Swal.fire({
+        title: 'Error',
+        text: msg,
+        icon: 'error',
+        showConfirmButton: false,
+        timer: 2000,
+      });
     } finally {
       setSubmitting(false);
     }
@@ -122,23 +131,51 @@ export default function ClientAuthPage() {
       if (token && clientId) {
         localStorage.setItem('token', token);
         localStorage.setItem('clientId', clientId);
-        Swal.fire('Success', message, 'success').then(() => {
+        Swal.fire({
+          title: 'Success',
+          text: message,
+          icon: 'success',
+          showConfirmButton: false,
+          timer: 2000,
+        }).then(() => {
           router.replace('/dashboard');
         });
       } else {
-        Swal.fire('Error', data.message || 'Unexpected response', 'error');
+        Swal.fire({
+          title: 'Error',
+          text: data.message || 'Unexpected response',
+          icon: 'error',
+          showConfirmButton: false,
+          timer: 2000,
+        });
       }
     } catch (err: any) {
       const msg =
         err.response?.data?.message ?? err.message ?? 'Invalid or expired OTP';
-      Swal.fire('Error', msg, 'error');
+      Swal.fire({
+        title: 'Error',
+        text: msg,
+        icon: 'error',
+        showConfirmButton: false,
+        timer: 2000,
+      });
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex relative">
+      {/* Logo + Home link in top-right */}
+      <div className="absolute top-4 right-4">
+        <Link href="/" className="flex items-center">
+          <Image src="/logo.png" alt="ShareMitra Logo" width={32} height={32} />
+          <span className="ml-2 text-lg font-bold text-emerald-600">
+            ShareMitra
+          </span>
+        </Link>
+      </div>
+
       {/* Left panel */}
       <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-slate-50 via-emerald-50 to-green-50 flex-col justify-center items-start px-16">
         <h1 className="text-4xl font-extrabold text-emerald-600 mb-2">
@@ -242,7 +279,6 @@ export default function ClientAuthPage() {
                 </div>
               )}
 
-              {/* Invisible reCAPTCHA widget */}
               <ReCAPTCHA
                 sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
                 size="invisible"
@@ -284,6 +320,7 @@ export default function ClientAuthPage() {
             </form>
           )}
 
+          {/* Removed the Back to home link */}
           <div className="mt-4 text-center space-y-2">
             {mode === 'collect' &&
               (authType === 'register' ? (
@@ -313,12 +350,6 @@ export default function ClientAuthPage() {
                   </button>
                 </p>
               ))}
-            <Link
-              href="/"
-              className="block text-sm text-emerald-600 hover:text-emerald-500"
-            >
-              Back to home
-            </Link>
           </div>
         </div>
       </div>

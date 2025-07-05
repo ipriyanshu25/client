@@ -17,7 +17,7 @@ interface ServiceOption {
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-const RAZORPAY_KEY = 'rzp_test_2oIQzZ7i0uQ6sn';
+const RAZORPAY_KEY = 'rzp_live_GngmINuJmpWywN';
 
 export default function CreateCampaign() {
   const [serviceOptions, setServiceOptions] = useState<ServiceOption[]>([]);
