@@ -208,7 +208,7 @@ export default function AddEditServicePage() {
                 required
               />
               <Input
-                placeholder="Value"
+                placeholder="USD Rate per Unit"
                 value={item.value}
                 onChange={e => {
                   const v = e.target.value;

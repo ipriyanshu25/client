@@ -148,23 +148,22 @@ export default function CreateCampaign() {
     setServices(prev => ({ ...prev, [name]: qty }));
   }
 
-
   /* -------------------------------- UI -------------------------------- */
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-50">
       <header className="sticky top-0 z-50 border-b border-white/20 bg-white/70 backdrop-blur-lg shadow-sm">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => router.push('/')}>
+          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => router.push('/')}>  
             <img src="/logo.png" className="w-9 h-9 rounded-full" alt="Logo" />
             <span className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
               ShareMitra
             </span>
           </div>
           <div className="flex items-center space-x-3">
-            <button onClick={() => router.push('/dashboard')} className="text-gray-700 font-medium cursor-pointer border-2 rounded-md px-4 py-2 transition-colors duration-200 bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700">
+            <button onClick={() => router.push('/dashboard')} className="text-gray-700 font-medium border-2 rounded-md px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 transition duration-200">
               Dashboard
             </button>
-            <button onClick={() => router.push('/services')} className="text-gray-700 font-medium cursor-pointer border-2 rounded-md px-4 py-2 transition-colors duration-200 bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700">
+            <button onClick={() => router.push('/services')} className="text-gray-700 font-medium border-2 rounded-md px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 transition duration-200">
               Services
             </button>
           </div>
@@ -172,7 +171,7 @@ export default function CreateCampaign() {
       </header>
 
       <main className="flex-grow container mx-auto px-4 py-12">   
-        <Card className="mx-auto max-w-3xl rounded-2xl bg-white ring-1 ring-emerald-200/60 shadow-xl p-8 md:p-12">
+        <Card className="mx-auto max-w-3xl bg-white p-8 rounded-2xl ring-1 ring-emerald-200/60 shadow-xl md:p-12">
           <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
             Create New Campaign
           </h1>
@@ -186,7 +185,7 @@ export default function CreateCampaign() {
               value={serviceId}
               onChange={handleServiceSelect}
               disabled={loading || serviceOptions.length === 0}
-              className="w-full h-12 rounded-md border border-gray-300 focus:ring-2 focus:ring-emerald-500 px-3"
+              className="w-full h-12 rounded-md border border-gray-300 px-3 focus:ring-2 focus:ring-emerald-500"
             >
               <option value="">-- Select Platform --</option>
               {serviceOptions.map(opt => (
@@ -194,7 +193,6 @@ export default function CreateCampaign() {
               ))}
             </select>
           </div>
-
 
           {/* Post Link */}
           <div className="mb-8">
@@ -205,32 +203,37 @@ export default function CreateCampaign() {
               value={postLink}
               onChange={e => setPostLink(e.target.value)}
               disabled={loading}
-              className="w-full h-12 rounded-md border border-gray-300 focus:ring-2 focus:ring-emerald-500 px-3"
+              className="w-full h-12 rounded-md border border-gray-300 px-3 focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
-          {/* Services Toggles */}
+          {/* Services & Qty Header */}
           {selectedService && (
-            <div className="mb-8 space-y-4">
-              <label className="block text-lg font-semibold text-gray-800 mb-2">Services</label>
-              {selectedService.serviceContent.map(item => (
-                <div key={item.contentId} className="flex items-center justify-between p-4 border border-emerald-200 rounded-md">
-                  <div className="flex flex-col">
-                    <span className="text-gray-900 text-lg">{item.key}</span>
-                    <span className="text-gray-500 text-sm">{item.value}$ per {item.key}</span>
+            <div className="mb-8">
+              <div className="flex justify-between mb-2">
+                <span className="text-lg font-semibold text-gray-800">Services</span>
+                <span className="text-lg font-semibold text-gray-800">Quantity</span>
+              </div>
+              <div className="space-y-4">
+                {selectedService.serviceContent.map(item => (
+                  <div key={item.contentId} className="flex items-center justify-between p-4 border border-emerald-200 rounded-md">
+                    <div className="flex flex-col">
+                      <span className="text-gray-900 text-lg">{item.key}</span>
+                      <span className="text-gray-500 text-sm">{item.value}$ per {item.key}</span>
+                    </div>
+                    <input
+                      type="number"
+                      name={item.contentId}
+                      min={0}
+                      value={services[item.contentId] || 0}
+                      onChange={handleQuantityChange}
+                      disabled={loading}
+                      style={{ WebkitAppearance: 'none', MozAppearance: 'textfield', margin: 0 }}
+                      className="w-20 h-10 rounded-md border border-gray-300 text-center focus:ring-2 focus:ring-emerald-500"
+                    />
                   </div>
-                  <input
-                    type="number"
-                    style={{ WebkitAppearance: 'none', MozAppearance: 'textfield', margin: 0 }}
-                    min={0}
-                    name={item.contentId}
-                    value={services[item.contentId] || 0}
-                    onChange={handleQuantityChange}
-                    disabled={loading}
-                    className="w-20 h-10 rounded-md border border-gray-300 text-center focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 
@@ -240,7 +243,7 @@ export default function CreateCampaign() {
             <Button
               onClick={handlePayment}
               disabled={loading || !serviceId || !postLink || totalAmount === 0}
-              className="px-8 py-3 text-lg font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg disabled:opacity-50 cursor-pointer transition-colors duration-200 rounded-md"
+              className="px-8 py-3 text-lg font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg disabled:opacity-50 transition duration-200 rounded-md"
             >
               {loading ? 'Processing…' : 'Pay & Create Campaign'}
             </Button>
@@ -250,9 +253,9 @@ export default function CreateCampaign() {
 
       {/* FOOTER */}
       <footer className="bg-gray-900 text-white pb-8 mt-auto">
-          <div className="col-span-full border-t border-gray-800 pt-8 text-center text-gray-400">
-            &copy; {new Date().getFullYear()} ShareMitra. All rights reserved.
-          </div>
+        <div className="border-t border-gray-800 pt-8 text-center text-gray-400">
+          &copy; {new Date().getFullYear()} ShareMitra. All rights reserved.
+        </div>
       </footer>
     </div>
   );
