@@ -9,7 +9,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 interface Action {
-  actionId: string;
   contentId: string;
   contentKey: string;
   quantity: number;
@@ -161,7 +160,7 @@ export default function ClientCampaignsPage() {
                       </thead>
                       <tbody>
                         {c.actions.map((a) => (
-                          <tr key={a.actionId}>
+                          <tr key={a.contentId} >
                             <td className="py-1">{a.contentKey}</td>
                             <td className="py-1">{a.quantity}</td>
                             <td className="py-1">{a.totalCost.toFixed(2)}$</td>
