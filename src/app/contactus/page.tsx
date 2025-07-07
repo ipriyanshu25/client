@@ -63,9 +63,9 @@ export default function ContactPage() {
 
     const infoItems = [
         { label: 'Email', value: 'care@sharemitra.com' },
-        { label: 'Phone', value: '+1 (800) 123-4567' },
-        { label: 'Address', value: '123 Green St, Suite 100, San Francisco, CA' },
-        { label: 'Hours', value: 'Mon–Fri: 9am – 6pm; Sat–Sun: Closed' },
+        { label: 'Phone', value: '(US) +1 (904) 219-4648 , (IN) +91 92842 90181' },
+        { label: 'Address', value: '301A, Ekam Enclave III, 301A, Ramai Nagar, near Kapil Nagar Square, Nari Road, Nagpur - MH 440026' },
+        { label: 'Hours', value: 'Mon–Sat: 10:30 AM – 6:30 PM; Sunday : Closed' },
     ];
 
     return (

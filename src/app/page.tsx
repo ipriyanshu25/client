@@ -16,8 +16,6 @@ import {
   ArrowRight,
   Shield,
   TrendingUp,
-  Info,
-  Mail,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -39,9 +37,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-// Configure axios base URL without trailing slash
+// Ensure we never end up with `baseURL: undefined`
+const API_URL = process.env.NEXT_PUBLIC_API_URL
+  ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "")
+  : "";
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, ""),
+  baseURL: API_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
 interface ServiceContent {
@@ -60,6 +64,7 @@ interface Service {
 
 export default function Home() {
   const router = useRouter();
+
   const [client, setClient] = useState<{
     name: { firstName: string; lastName: string };
     email: string;
@@ -90,12 +95,12 @@ export default function Home() {
     const token = localStorage.getItem("token");
     const clientId = localStorage.getItem("clientId");
     if (!token || !clientId) return;
+
     api
-      .post<{ name: { firstName: string; lastName: string }; email: string }>(
-        "/client/getById",
-        { clientId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
+      .post<{
+        name: { firstName: string; lastName: string };
+        email: string;
+      }>("/client/getById", { clientId }, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => setClient(res.data))
       .catch(console.error);
   }, []);
@@ -131,6 +136,7 @@ export default function Home() {
     e.preventDefault();
     if (!oldPassword || !newPassword) return;
     setIsUpdatingPassword(true);
+
     try {
       const token = localStorage.getItem("token");
       const clientId = localStorage.getItem("clientId");
@@ -173,8 +179,7 @@ export default function Home() {
       );
     }
     const h = svc.serviceHeading.toLowerCase();
-    if (h.includes("youtube"))
-      return <Play className="h-8 w-8 text-red-600" />;
+    if (h.includes("youtube")) return <Play className="h-8 w-8 text-red-600" />;
     if (h.includes("instagram"))
       return <Instagram className="h-8 w-8 text-pink-600" />;
     return <Globe className="h-8 w-8 text-emerald-600" />;
@@ -183,168 +188,166 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-50">
       {/* HEADER */}
-    <header className="relative z-50 border-b border-white/20 bg-white/80 backdrop-blur-md">
-      <div className="container mx-auto flex items-center justify-between px-4 py-4">
-        {/* Logo + brand */}
-        <Link href="/" className="flex items-center space-x-3">
-          <div className="h-10 w-10 overflow-hidden rounded-full">
-            <img
+      <header className="relative z-50 border-b border-white/20 bg-white/80 backdrop-blur-md">
+        <div className="container mx-auto flex items-center justify-between px-4 py-4">
+          {/* Logo + brand */}
+          <Link href="/" className="flex items-center space-x-3">
+            <div className="h-10 w-10 overflow-hidden rounded-full">
+              <img
                 src="/logo.png"
                 alt="ShareMitra Logo"
                 className="w-full h-full object-cover"
               />
-          </div>
-          <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-2xl font-bold text-transparent">
-            ShareMitra
-          </span>
-        </Link>
+            </div>
+            <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-2xl font-bold text-transparent">
+              ShareMitra
+            </span>
+          </Link>
 
-        {/* Right‑hand group: nav (desktop) + profile/login */}
-        <div className="flex items-center space-x-3">
-          {/* Desktop nav */}
-          <nav className="mr-2 hidden items-center space-x-4 lg:space-x-6 md:flex">
-            <Link
-              href="/about"
-              className="flex items-center gap-1 text-gray-700 transition-colors hover:text-emerald-600"
-              aria-label="About Us"
-            >
-              <Info className="h-4 w-4" /> About Us
-            </Link>
-            <Link
-              href="/contactus"
-              className="flex items-center gap-1 text-gray-700 transition-colors hover:text-emerald-600"
-              aria-label="Contact Us"
-            >
-              <Mail className="h-4 w-4" /> Contact Us
-            </Link>
-            <Link href="/services" aria-label="Services">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
-              >
-                Services
-              </Button>
-            </Link>
-          </nav>
-
-          {/* Profile / Login */}
-          {isLoggedIn ? (
-            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-              <SheetTrigger asChild>
+          {/* Right-hand group */}
+          <div className="flex items-center space-x-3">
+            {/* Desktop nav */}
+            <nav className="flex items-center space-x-4">
+              <Link href="/services">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-2 bg-white text-gray-800 hover:bg-gray-100"
-                  aria-label="User Menu"
+                  className="bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer"
                 >
-                  <User className="h-4 w-4" /> {fullName}
+                  Services
                 </Button>
-              </SheetTrigger>
-              <SheetContent
-                side="right"
-                className="flex w-[320px] flex-col bg-white sm:w-[380px]"
-              >
-                <SheetHeader className="p-4">
-                  <SheetTitle className="text-lg font-semibold">Profile</SheetTitle>
-                </SheetHeader>
-                <div className="flex-1 space-y-4 overflow-auto p-4">
-                  <div>
-                    <Label className="mb-1">Name</Label>
-                    <Input disabled value={fullName} className="bg-gray-50" />
-                  </div>
-                  <div>
-                    <Label className="mb-1">Email</Label>
-                    <Input disabled value={client.email} className="bg-gray-50" />
-                  </div>
-
-                  {!showPasswordForm ? (
-                    <Button
-                      onClick={() => setShowPasswordForm(true)}
-                      className="w-full cursor-pointer bg-emerald-600 text-white hover:bg-emerald-700"
-                    >
-                      Update Password
-                    </Button>
-                  ) : (
-                    <form onSubmit={handlePasswordSubmit} className="space-y-4">
-                      <div>
-                        <Label className="mb-1">Old Password</Label>
-                        <Input
-                          type="password"
-                          required
-                          value={oldPassword}
-                          onChange={(e) => setOldPassword(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label className="mb-1">New Password</Label>
-                        <Input
-                          type="password"
-                          required
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          type="submit"
-                          disabled={isUpdatingPassword}
-                          className="flex-1 cursor-pointer bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
-                        >
-                          {isUpdatingPassword ? "Updating…" : "Save"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="flex-1 cursor-pointer bg-red-600 text-white hover:bg-red-700"
-                          onClick={() => {
-                            setShowPasswordForm(false);
-                            setOldPassword("");
-                            setNewPassword("");
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
-                  )}
-                </div>
-                <SheetFooter className="p-4">
+              </Link>
+              {!isLoggedIn && (
+                <Link href="/login">
                   <Button
-                    variant="destructive"
-                    onClick={logout}
-                    className="w-full cursor-pointer bg-red-600 text-white hover:bg-red-700"
+                    variant="outline"
+                    size="sm"
+                    className="bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700 cursor-pointer"
                   >
-                    <LogOut className="mr-2 h-4 w-4" /> Logout
+                    <LogIn className="h-4 w-4" /> Login
                   </Button>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
-          ) : (
-            <Link href="/login" aria-label="Login">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700"
+                </Link>
+              )}
+              <Link href="/about" className="text-gray-700 hover:text-emerald-600">
+                About Us
+              </Link>
+              <Link
+                href="/contactus"
+                className="text-gray-700 hover:text-emerald-600"
               >
-                <LogIn className="h-4 w-4" /> Login
-              </Button>
-            </Link>
-          )}
+                Contact Us
+              </Link>
+            </nav>
+
+            {/* Profile / Login */}
+            {isLoggedIn ? (
+              <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 bg-white text-gray-800 hover:bg-gray-100"
+                    aria-label="User Menu"
+                  >
+                    <User className="h-4 w-4" /> {fullName}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent
+                  side="right"
+                  className="flex w-[320px] flex-col bg-white sm:w-[380px]"
+                >
+                  <SheetHeader className="p-4">
+                    <SheetTitle className="text-lg font-semibold">Profile</SheetTitle>
+                  </SheetHeader>
+                  <div className="flex-1 space-y-4 overflow-auto p-4">
+                    <div>
+                      <Label className="mb-1">Name</Label>
+                      <Input disabled value={fullName} className="bg-gray-50" />
+                    </div>
+                    <div>
+                      <Label className="mb-1">Email</Label>
+                      <Input disabled value={client.email} className="bg-gray-50" />
+                    </div>
+
+                    {!showPasswordForm ? (
+                      <Button
+                        onClick={() => setShowPasswordForm(true)}
+                        className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                      >
+                        Update Password
+                      </Button>
+                    ) : (
+                      <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                        <div>
+                          <Label className="mb-1">Old Password</Label>
+                          <Input
+                            type="password"
+                            required
+                            value={oldPassword}
+                            onChange={(e) => setOldPassword(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label className="mb-1">New Password</Label>
+                          <Input
+                            type="password"
+                            required
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="submit"
+                            disabled={isUpdatingPassword}
+                            className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            {isUpdatingPassword ? "Updating…" : "Save"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="flex-1 bg-red-600 text-white hover:bg-red-700"
+                            onClick={() => {
+                              setShowPasswordForm(false);
+                              setOldPassword("");
+                              setNewPassword("");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                  <SheetFooter className="p-4">
+                    <Button
+                      variant="destructive"
+                      onClick={logout}
+                      className="w-full bg-red-600 text-white hover:bg-red-700 cursor-pointer "
+                    >
+                      <LogOut className="mr-2 h-4 w-4" /> Logout
+                    </Button>
+                  </SheetFooter>
+                </SheetContent>
+              </Sheet>
+            ) : null}
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
       {/* Hero Section */}
       <section className="relative overflow-hidden py-20 lg:py-32 text-center">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 to-green-600/10" />
         <div className="container relative mx-auto px-4">
           <h1 className="mb-6 text-5xl font-bold text-gray-900 lg:text-7xl">
-            Boost Your Social Media{' '}
+            Boost Your Social Media{" "}
             <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
               Engagement
             </span>
           </h1>
           <p className="mb-8 text-xl text-gray-600 lg:text-2xl">
-            Get 100% real human likes, comments, and replies on YouTube and Instagram. Grow your audience with our premium engagement services.
+            Get 100% real human likes, comments, and replies on YouTube and
+            Instagram. Grow your audience with our premium engagement services.
           </p>
           <Button
             size="lg"
@@ -352,7 +355,7 @@ export default function Home() {
             className="bg-gradient-to-r from-emerald-600 to-green-600 px-8 py-4 text-lg text-white hover:from-emerald-700 hover:to-green-700 cursor-pointer"
           >
             Start Your Campaign
-            <ArrowRight className="ml-2 h-৫ w-৫" />
+            <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
       </section>
@@ -368,8 +371,11 @@ export default function Home() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {services.map(service => (
-              <Card key={service.serviceId} className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 rounded-2xl">
+            {services.map((service) => (
+              <Card
+                key={service.serviceId}
+                className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 rounded-2xl"
+              >
                 <CardHeader className="text-center pb-4">
                   <div className="w-16 h-16 mx-auto mb-4 bg-emerald-100 flex items-center justify-center rounded-full group-hover:bg-emerald-200 transition-colors">
                     {renderIconOrLogo(service)}
@@ -381,16 +387,20 @@ export default function Home() {
                     {service.serviceDescription}
                   </CardDescription>
                 </CardHeader>
-
                 <CardContent className="flex flex-col items-center space-y-3">
-                  {service.serviceContent.map(item => (
-                    <div key={item.contentId || item.key} className="flex items-center space-x-3">
+                  {service.serviceContent.map((item) => (
+                    <div
+                      key={item.contentId || item.key}
+                      className="flex items-center space-x-3"
+                    >
                       <CheckCircle className="h-5 w-5 text-green-500" />
-                      <span>{item.key}: {item.value}$</span>
+                      <span>
+                        {item.key}: ${item.value}
+                      </span>
                     </div>
                   ))}
                   <div className="mt-4">
-                    <Link href={isLoggedIn ? '/dashboard' : '/login'}>
+                    <Link href={isLoggedIn ? "/dashboard" : "/login"}>
                       <Button className="bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700 cursor-pointer">
                         Create Campaign
                       </Button>
@@ -403,7 +413,10 @@ export default function Home() {
 
           <div className="text-center mt-8">
             <Link href="/services">
-              <Button size="lg" className="bg-gradient-to-r from-emerald-600 to-green-600 rounded-md px-6 py-3 text-white cursor-pointer hover:from-emerald-700 hover:to-green-700">
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-emerald-600 to-green-600 rounded-md px-6 py-3 text-white hover:from-emerald-700 hover:to-green-700 cursor-pointer"
+              >
                 View More Services
               </Button>
             </Link>
@@ -413,7 +426,7 @@ export default function Home() {
 
 
       {/* How It Works */}
-      <section className="py-20 bg-gradient-to-r from-emerald-50 to-green-50">
+      < section className="py-20 bg-gradient-to-r from-emerald-50 to-green-50" >
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">
@@ -452,10 +465,10 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </section>
+      </section >
 
       {/* Features */}
-      <section className="py-20 bg-gray-50">
+      < section className="py-20 bg-gray-50" >
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">
@@ -489,10 +502,10 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </section>
+      </section >
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-emerald-600 to-green-600">
+      < section className="py-20 bg-gradient-to-r from-emerald-600 to-green-600" >
         <div className="container mx-auto px-4 text-center text-white">
           <h2 className="text-4xl font-bold mb-4">
             Ready to Boost Your Social Media?
@@ -512,11 +525,11 @@ export default function Home() {
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
-      </section>
+      </section >
 
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
+      < footer className="bg-gray-900 text-white py-12" >
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
@@ -570,8 +583,8 @@ export default function Home() {
             <p>&copy; 2025 ShareMitra. All rights reserved.</p>
           </div>
         </div>
-      </footer>
-    </div>
+      </footer >
+    </div >
   );
 }
 

@@ -115,7 +115,7 @@ export default function ServicesPage() {
             )}
             {!isLoggedIn && (
               <Link href="/login">
-                <Button size="sm" variant="outline" className="bg-gradient-to-r from-emerald-600 to-green-600 text-white">
+                <Button size="sm" variant="outline" className="bg-gradient-to-r from-emerald-600 to-green-600 text-white cursor-pointer">
                   Login
                 </Button>
               </Link>
@@ -165,7 +165,7 @@ export default function ServicesPage() {
                     ))}
                     <div className="mt-4">
                       <Link href={isLoggedIn ? '/dashboard' : '/login'}>
-                        <Button className="bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700">
+                        <Button className="bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700 cursor-pointer">
                           Create Campaign
                         </Button>
                       </Link>
