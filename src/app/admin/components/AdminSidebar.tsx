@@ -1,9 +1,7 @@
-'use client';
-
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Users, LogOut, Briefcase, FileText } from 'lucide-react';
+import { Users, LogOut, Briefcase, FileText, Settings } from 'lucide-react';
 import clsx from 'clsx';
 
 const navItems = [
@@ -35,7 +33,7 @@ export default function AdminSidebar() {
     router.replace('/admin/login');
   };
 
-  const toggleDocs = () => setOpenDocs((prev) => !prev);
+  const toggleDocs = () => setOpenDocs(prev => !prev);
 
   return (
     <aside className="w-64 bg-white shadow-lg p-6 flex flex-col">
@@ -44,7 +42,6 @@ export default function AdminSidebar() {
       {/* Navigation */}
       <nav className="flex-1 space-y-2">
         {navItems.map(({ href, label, Icon, children }) => {
-          // Render top-level links
           if (!children) {
             return (
               <Link
@@ -62,7 +59,6 @@ export default function AdminSidebar() {
             );
           }
 
-          // Render collapsible Documents menu
           return (
             <div key={label}>
               <button
@@ -100,6 +96,19 @@ export default function AdminSidebar() {
             </div>
           );
         })}
+
+        {/* Settings Button */}
+        <Link
+          href="/admin/settings"
+          className={clsx(
+            'flex items-center gap-3 px-3 py-2 rounded-md mt-2 transition-colors',
+            pathname.startsWith('/admin/settings')
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+          )}
+        >
+          <Settings className="w-5 h-5" /> Settings
+        </Link>
       </nav>
 
       {/* Logout */}
