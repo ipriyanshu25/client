@@ -27,8 +27,14 @@ import {
   Search,
 } from "lucide-react";
 
+/* ------------------------------------------------------------------ */
+/*                            API INSTANCE                            */
+/* ------------------------------------------------------------------ */
 const api = axios.create({ baseURL: process.env.NEXT_PUBLIC_API_URL });
 
+/* ------------------------------------------------------------------ */
+/*                              TYPES                                 */
+/* ------------------------------------------------------------------ */
 interface ClientProfile {
   name: { firstName: string; lastName: string };
   email: string;
@@ -50,7 +56,9 @@ interface Campaign {
   createdAt: string;
 }
 
-// helper for auto‑close toasts
+/* ------------------------------------------------------------------ */
+/*                              HELPERS                               */
+/* ------------------------------------------------------------------ */
 const toast = (opts: SweetAlertOptions) =>
   Swal.fire({
     ...opts,
@@ -59,25 +67,34 @@ const toast = (opts: SweetAlertOptions) =>
     timerProgressBar: true,
   });
 
+/* ------------------------------------------------------------------ */
+/*                               MAIN                                 */
+/* ------------------------------------------------------------------ */
 export default function Dashboard() {
   const router = useRouter();
+
+  /* ------------------------------ STATE ----------------------------- */
   const [client, setClient] = useState<ClientProfile>({
     name: { firstName: "", lastName: "" },
     email: "",
   });
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [showEmailForm, setShowEmailForm] = useState(false);
-  const [showEmailOtpForm, setShowEmailOtpForm] = useState(false);
-  const [newEmail, setNewEmail] = useState("");
-  const [emailOtp, setEmailOtp] = useState("");
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
+
+  /* Password‑update flow */
+  const [showPassForm, setShowPassForm] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [updatingPass, setUpdatingPass] = useState(false);
+
+  /* Campaigns + UI */
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [filteredCampaigns, setFilteredCampaigns] = useState<Campaign[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [showSearch, setShowSearch] = useState(false);
   const [loading, setLoading] = useState(true);
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
 
+  /* ----------------------------- EFFECTS ---------------------------- */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const clientId = localStorage.getItem("clientId");
@@ -85,6 +102,7 @@ export default function Dashboard() {
       router.push("/login");
       return;
     }
+
     (async () => {
       try {
         const [profileRes, campaignRes] = await Promise.all([
@@ -100,7 +118,6 @@ export default function Dashboard() {
           ),
         ]);
         setClient(profileRes.data);
-        setNewEmail(profileRes.data.email);
         setCampaigns(campaignRes.data.campaigns || []);
         setFilteredCampaigns(campaignRes.data.campaigns || []);
       } catch (err) {
@@ -111,6 +128,7 @@ export default function Dashboard() {
     })();
   }, [router]);
 
+  /* ---------------------------- HANDLERS ---------------------------- */
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("clientId");
@@ -141,9 +159,7 @@ export default function Dashboard() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setCampaigns((prev) => prev.filter((c) => c.campaignId !== campaignId));
-      setFilteredCampaigns((prev) =>
-        prev.filter((c) => c.campaignId !== campaignId)
-      );
+      setFilteredCampaigns((prev) => prev.filter((c) => c.campaignId !== campaignId));
       toast({ title: "Deleted!", text: "Campaign removed.", icon: "success" });
     } catch (err: any) {
       toast({
@@ -154,89 +170,53 @@ export default function Dashboard() {
     }
   };
 
-  // ------------------------------ EMAIL FLOW ------------------------------
-  const handleEmailSubmit = async (e: React.FormEvent) => {
+  /* -------------------------- PASSWORD FLOW ------------------------- */
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSendingOtp(true);
+    setUpdatingPass(true);
     try {
       const token = localStorage.getItem("token");
       const clientId = localStorage.getItem("clientId");
       await api.post(
-        "/client/generateEmailOtp",
-        { clientId, newEmail },
+        "/client/update",
+        { clientId, oldPassword, newPassword },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast({
-        title: "OTP Sent",
-        text: "Check your new email for the OTP.",
-        icon: "info",
-      });
-      setShowEmailOtpForm(true);
+      toast({ title: "Success", text: "Password updated.", icon: "success" });
+      setShowPassForm(false);
+      setOldPassword("");
+      setNewPassword("");
     } catch (err: any) {
       toast({
         title: "Error",
-        text: err.response?.data?.message || "Failed to send OTP.",
+        text: err.response?.data?.message || "Password update failed.",
         icon: "error",
       });
     } finally {
-      setIsSendingOtp(false);
+      setUpdatingPass(false);
     }
   };
 
-  const handleEmailOtpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem("token");
-      const clientId = localStorage.getItem("clientId");
-      const res = await api.post<{ email: string }>(
-        "/client/verifyEmailOtp",
-        { clientId, otp: emailOtp },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setClient((prev) => ({ ...prev, email: res.data.email }));
-      toast({
-        title: "Success",
-        text: "Email updated successfully.",
-        icon: "success",
-      });
-      setShowEmailForm(false);
-      setShowEmailOtpForm(false);
-    } catch (err: any) {
-      toast({
-        title: "Error",
-        text: err.response?.data?.message || "OTP verification failed.",
-        icon: "error",
-      });
-    }
-  };
-
-  // ------------------------------ SEARCH ------------------------------
+  /* ----------------------------- SEARCH ----------------------------- */
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value.trim();
     setSearchQuery(q);
-
-    // If empty, show all
     if (q === "") {
       setFilteredCampaigns(campaigns);
       return;
     }
-
-    // Numeric search => treat as 1‑based index
     if (/^\d+$/.test(q)) {
       const idx = parseInt(q, 10);
       const campaign = campaigns[idx - 1];
       setFilteredCampaigns(campaign ? [campaign] : []);
       return;
     }
-
-    // Text search by heading
     const filtered = campaigns.filter((c) =>
       c.serviceHeading.toLowerCase().includes(q.toLowerCase())
     );
     setFilteredCampaigns(filtered);
   };
 
-  // Expand / collapse action rows
   const toggleExpand = (id: string) => {
     setExpandedCampaigns((prev) => {
       const next = new Set(prev);
@@ -249,9 +229,12 @@ export default function Dashboard() {
   const MAX_VISIBLE = 3;
   const totalCount = filteredCampaigns.length;
 
+  /* ------------------------------------------------------------------ */
+  /*                                JSX                                 */
+  /* ------------------------------------------------------------------ */
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-emerald-50 to-green-50">
-      {/* Header */}
+      {/* --------------------------- HEADER --------------------------- */}
       <header className="sticky top-0 bg-white shadow-md z-10">
         <div className="container mx-auto p-4 flex justify-between items-center">
           <Link href="/" className="flex items-center space-x-3">
@@ -278,77 +261,57 @@ export default function Dashboard() {
                 </SheetHeader>
                 <div className="flex-1 overflow-auto p-4 space-y-4">
                   <div>
-                    <Label className="mb-2">Name</Label>
+                    <Label className="mb-1">Name</Label>
                     <Input disabled value={fullName} className="bg-gray-50" />
                   </div>
                   <div>
-                    <Label className="mb-2">Email</Label>
+                    <Label className="mb-1">Email</Label>
                     <Input disabled value={client.email} className="bg-gray-50" />
                   </div>
-                  {/* Update Email Flow */}
-                  {!showEmailForm ? (
+
+                  {/* ------------------ PASSWORD UPDATE FLOW ------------------ */}
+                  {!showPassForm ? (
                     <Button
-                      onClick={() => setShowEmailForm(true)}
+                      onClick={() => setShowPassForm(true)}
                       className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
                     >
-                      Update Email
+                      Update Password
                     </Button>
-                  ) : !showEmailOtpForm ? (
-                    <form onSubmit={handleEmailSubmit} className="space-y-4">
+                  ) : (
+                    <form onSubmit={handlePasswordSubmit} className="space-y-4">
                       <div>
-                        <Label className="mb-2">New Email</Label>
+                        <Label className="mb-1">Old Password</Label>
                         <Input
-                          type="email"
+                          type="password"
                           required
-                          value={newEmail}
-                          onChange={(e) => setNewEmail(e.target.value)}
+                          value={oldPassword}
+                          onChange={(e) => setOldPassword(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="mb-1">New Password</Label>
+                        <Input
+                          type="password"
+                          required
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
                         />
                       </div>
                       <div className="flex gap-2">
                         <Button
                           type="submit"
-                          disabled={isSendingOtp}
+                          disabled={updatingPass}
                           className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
                         >
-                          {isSendingOtp ? "Sending…" : "Send OTP"}
+                          {updatingPass ? "Updating…" : "Save"}
                         </Button>
                         <Button
                           variant="outline"
                           className="flex-1 bg-red-600 text-white hover:bg-red-700"
                           onClick={() => {
-                            setShowEmailForm(false);
-                            setEmailOtp("");
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
-                  ) : (
-                    <form onSubmit={handleEmailOtpSubmit} className="space-y-4">
-                      <div>
-                        <Label className="mb-2">Enter OTP</Label>
-                        <Input
-                          type="text"
-                          required
-                          value={emailOtp}
-                          onChange={(e) => setEmailOtp(e.target.value)}
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          type="submit"
-                          className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
-                        >
-                          Verify OTP
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="flex-1 bg-red-600 text-white hover:bg-red-700"
-                          onClick={() => {
-                            setShowEmailForm(false);
-                            setEmailOtp("");
-                            setShowEmailOtpForm(false);
+                            setShowPassForm(false);
+                            setOldPassword("");
+                            setNewPassword("");
                           }}
                         >
                           Cancel
@@ -380,7 +343,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Main */}
+      {/* ----------------------------- MAIN ----------------------------- */}
       <main className="container mx-auto p-8 flex-1 w-full">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-gray-900">
@@ -391,12 +354,11 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Campaign header */}
+        {/* ------------------ Campaign header (search, new) -------------- */}
         <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
           <h2 className="text-2xl font-semibold">Your Campaigns</h2>
 
           <div className="flex items-center gap-3 ml-auto flex-wrap">
-            {/* Search input field */}
             {showSearch && (
               <Input
                 type="text"
@@ -406,33 +368,28 @@ export default function Dashboard() {
                 className="max-w-xs"
               />
             )}
-            {/* Search toggle button */}
             <Button
               size="sm"
               onClick={() => setShowSearch((prev) => !prev)}
-              className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700 cursor-pointer"
+              className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700"
             >
               <Search className="w-5 h-5" />
             </Button>
-
-            {/* Total count button‑style display */}
             <Button
               size="sm"
               className="cursor-default bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700"
             >
               Total: {totalCount}
             </Button>
-
-            {/* New campaign */}
             <Link href="/dashboard/addCampaign">
-              <Button className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700 cursor-pointer">
+              <Button className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700">
                 <Plus className="w-5 h-5" /> New Campaign
               </Button>
             </Link>
           </div>
         </div>
 
-        {/* Campaign Cards */}
+        {/* ------------------------- Campaign Cards --------------------- */}
         {loading ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -449,9 +406,7 @@ export default function Dashboard() {
           >
             {filteredCampaigns.map((c, idx) => {
               const isExpanded = expandedCampaigns.has(c.campaignId);
-              const actionsToShow = isExpanded
-                ? c.actions
-                : c.actions.slice(0, MAX_VISIBLE);
+              const actionsToShow = isExpanded ? c.actions : c.actions.slice(0, MAX_VISIBLE);
               return (
                 <motion.div key={c.campaignId} whileHover={{ scale: 1.02 }}>
                   <Card className="bg-white shadow hover:shadow-lg transition h-full flex flex-col">
@@ -462,12 +417,7 @@ export default function Dashboard() {
                         </h3>
                         <p className="truncate mb-4">
                           <span className="font-semibold">Link:</span>{" "}
-                          <a
-                            href={c.link}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-blue-600 underline"
-                          >
+                          <a href={c.link} target="_blank" rel="noreferrer" className="text-blue-600 underline">
                             {c.link}
                           </a>
                         </p>
@@ -481,23 +431,18 @@ export default function Dashboard() {
                             </tr>
                           </thead>
                           <tbody>
-                            {actionsToShow.map((action) => (
-                              <tr key={action.contentId} className="border-t">
-                                <td className="px-2 py-1">{action.contentKey}</td>
-                                <td className="px-2 py-1">{action.quantity}</td>
-                                <td className="px-2 py-1 font-semibold">
-                                  ${action.totalCost}
-                                </td>
+                            {actionsToShow.map((a) => (
+                              <tr key={a.contentId} className="border-t">
+                                <td className="px-2 py-1">{a.contentKey}</td>
+                                <td className="px-2 py-1">{a.quantity}</td>
+                                <td className="px-2 py-1 font-semibold">${a.totalCost}</td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
+
                         {c.actions.length > MAX_VISIBLE && (
-                          <Button
-                            variant="link"
-                            className="flex items-center gap-1 mb-4"
-                            onClick={() => toggleExpand(c.campaignId)}
-                          >
+                          <Button variant="link" className="flex items-center gap-1 mb-4" onClick={() => toggleExpand(c.campaignId)}>
                             {isExpanded ? (
                               <>
                                 <ChevronUp className="w-4 h-4" /> Show Less
@@ -515,15 +460,9 @@ export default function Dashboard() {
                         <div className="flex justify-between items-center mb-1">
                           <span className="text-sm font-semibold">Total: ${c.totalAmount}</span>
                         </div>
-                        <p className="text-xs text-gray-400">
-                          Created on {formatDate(c.createdAt)}
-                        </p>
+                        <p className="text-xs text-gray-400">Created on {formatDate(c.createdAt)}</p>
                         <div className="mt-2 flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleDelete(c.campaignId)}
-                          >
+                          <Button size="sm" variant="destructive" onClick={() => handleDelete(c.campaignId)}>
                             Delete
                           </Button>
                         </div>
@@ -537,7 +476,7 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* Footer */}
+      {/* --------------------------- FOOTER ----------------------------- */}
       <footer className="bg-gray-900 text-white pb-8 mt-auto">
         <div className="container mx-auto px-4">
           <div className="border-t border-gray-800 pt-8 text-center text-gray-400">

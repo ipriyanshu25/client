@@ -133,7 +133,7 @@ export default function PrivacyPolicyPage() {
                 <ul className="space-y-2 text-gray-400">
                   <li><Link href="/about" className="hover:underline">About Us</Link></li>
                   <li><Link href="/contactus" className="hover:underline">Contact</Link></li>
-                  <li className="hover:underline">FAQ</li>
+                  <li><Link href="/faqs" className="hover:underline">FAQ</Link></li>
                 </ul>
               </div>
 

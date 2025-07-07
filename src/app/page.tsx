@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import axios from 'axios';
-import Link from 'next/link';
-import Swal, { SweetAlertOptions } from 'sweetalert2';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import axios from "axios";
+import Link from "next/link";
+import Swal, { SweetAlertOptions } from "sweetalert2";
 import {
   Play,
   Instagram,
@@ -16,16 +16,18 @@ import {
   ArrowRight,
   Shield,
   TrendingUp,
-} from 'lucide-react';
+  Info,
+  Mail,
+} from "lucide-react";
 
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from "@/components/ui/card";
 import {
   Sheet,
   SheetTrigger,
@@ -33,13 +35,13 @@ import {
   SheetHeader,
   SheetTitle,
   SheetFooter,
-} from '@/components/ui/sheet';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 // Configure axios base URL without trailing slash
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, ''),
+  baseURL: process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, ""),
 });
 
 interface ServiceContent {
@@ -58,214 +60,279 @@ interface Service {
 
 export default function Home() {
   const router = useRouter();
-  const [client, setClient] = useState<{ name: { firstName: string; lastName: string }; email: string }>({
-    name: { firstName: '', lastName: '' },
-    email: '',
+  const [client, setClient] = useState<{
+    name: { firstName: string; lastName: string };
+    email: string;
+  }>({
+    name: { firstName: "", lastName: "" },
+    email: "",
   });
   const [services, setServices] = useState<Service[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  // Email update states
-  const [showEmailForm, setShowEmailForm] = useState(false);
-  const [showEmailOtpForm, setShowEmailOtpForm] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
-  const [emailOtp, setEmailOtp] = useState('');
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  // Password update states
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   // helper for auto-close toasts
   const toast = (opts: SweetAlertOptions) =>
-    Swal.fire({ ...opts, showConfirmButton: false, timer: 2000, timerProgressBar: true });
+    Swal.fire({
+      ...opts,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
+    });
 
   // fetch user profile
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const clientId = localStorage.getItem('clientId');
+    const token = localStorage.getItem("token");
+    const clientId = localStorage.getItem("clientId");
     if (!token || !clientId) return;
     api
       .post<{ name: { firstName: string; lastName: string }; email: string }>(
-        '/client/getById',
+        "/client/getById",
         { clientId },
         { headers: { Authorization: `Bearer ${token}` } }
       )
-      .then(res => {
-        setClient(res.data);
-        setNewEmail(res.data.email);
-      })
+      .then((res) => setClient(res.data))
       .catch(console.error);
   }, []);
 
   // fetch first page of services
   useEffect(() => {
     api
-      .get<{ data: Service[] }>('/service/getAll?page=1&limit=4')
-      .then(res => setServices(res.data.data))
+      .get<{ data: Service[] }>("/service/getAll?page=1&limit=4")
+      .then((res) => setServices(res.data.data))
       .catch(console.error);
   }, []);
 
   const isLoggedIn = Boolean(client.name.firstName);
-  const fullName = isLoggedIn ? `${client.name.firstName} ${client.name.lastName}`.trim() : '';
+  const fullName = isLoggedIn
+    ? `${client.name.firstName} ${client.name.lastName}`.trim()
+    : "";
 
   const goToCampaign = () => {
-    const token = localStorage.getItem('token');
-    const clientId = localStorage.getItem('clientId');
-    router.push(token && clientId ? '/dashboard' : '/login');
+    const token = localStorage.getItem("token");
+    const clientId = localStorage.getItem("clientId");
+    router.push(token && clientId ? "/dashboard" : "/login");
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('clientId');
-    setClient({ name: { firstName: '', lastName: '' }, email: '' });
+    localStorage.removeItem("token");
+    localStorage.removeItem("clientId");
+    setClient({ name: { firstName: "", lastName: "" }, email: "" });
     router.refresh();
   };
 
-  // Handle OTP generation
-  const handleEmailSubmit = async (e: React.FormEvent) => {
+  // Handle Password update
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSendingOtp(true);
+    if (!oldPassword || !newPassword) return;
+    setIsUpdatingPassword(true);
     try {
-      const token = localStorage.getItem('token');
-      const clientId = localStorage.getItem('clientId');
+      const token = localStorage.getItem("token");
+      const clientId = localStorage.getItem("clientId");
       await api.post(
-        '/client/generateEmailOtp',
-        { clientId, newEmail },
+        "/client/update",
+        { clientId, oldPassword, newPassword },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast({ title: 'OTP Sent', text: 'Check your new email for the OTP.', icon: 'info' });
-      setShowEmailOtpForm(true);
+      toast({
+        title: "Success",
+        text: "Password updated successfully.",
+        icon: "success",
+      });
+      setShowPasswordForm(false);
+      setOldPassword("");
+      setNewPassword("");
     } catch (err: any) {
-      toast({ title: 'Error', text: err.response?.data?.message || 'Failed to send OTP.', icon: 'error' });
+      toast({
+        title: "Error",
+        text: err.response?.data?.message || "Password update failed.",
+        icon: "error",
+      });
     } finally {
-      setIsSendingOtp(false);
-    }
-  };
-
-  // Handle OTP verification
-  const handleEmailOtpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('token');
-      const clientId = localStorage.getItem('clientId');
-      const res = await api.post<{ email: string }>(
-        '/client/verifyEmailOtp',
-        { clientId, otp: emailOtp },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setClient(prev => ({ ...prev, email: res.data.email }));
-      toast({ title: 'Success', text: 'Email updated successfully.', icon: 'success' });
-      setShowEmailForm(false);
-      setShowEmailOtpForm(false);
-    } catch (err: any) {
-      toast({ title: 'Error', text: err.response?.data?.message || 'OTP verification failed.', icon: 'error' });
+      setIsUpdatingPassword(false);
     }
   };
 
   // Render logo or icon
   const renderIconOrLogo = (svc: Service) => {
     if (svc.logo) {
-      const src = svc.logo.startsWith('data:') ? svc.logo : `data:image/png;base64,${svc.logo}`;
-      return <img src={src} alt={svc.serviceHeading} className="w-16 h-16 rounded-full object-cover" />;
+      const src = svc.logo.startsWith("data:")
+        ? svc.logo
+        : `data:image/png;base64,${svc.logo}`;
+      return (
+        <img
+          src={src}
+          alt={svc.serviceHeading}
+          className="w-16 h-16 rounded-full object-cover"
+        />
+      );
     }
     const h = svc.serviceHeading.toLowerCase();
-    if (h.includes('youtube')) return <Play className="h-8 w-8 text-red-600" />;
-    if (h.includes('instagram')) return <Instagram className="h-8 w-8 text-pink-600" />;
+    if (h.includes("youtube"))
+      return <Play className="h-8 w-8 text-red-600" />;
+    if (h.includes("instagram"))
+      return <Instagram className="h-8 w-8 text-pink-600" />;
     return <Globe className="h-8 w-8 text-emerald-600" />;
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-50">
       {/* HEADER */}
-      <header className="relative z-50 border-b border-white/20 bg-white/80 backdrop-blur-md">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden">
-              <img src="/logo.png" alt="ShareMitra Logo" className="w-full h-full object-cover" />
-            </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
-              ShareMitra
-            </span>
-          </Link>
+    <header className="relative z-50 border-b border-white/20 bg-white/80 backdrop-blur-md">
+      <div className="container mx-auto flex items-center justify-between px-4 py-4">
+        {/* Logo + brand */}
+        <Link href="/" className="flex items-center space-x-3">
+          <div className="h-10 w-10 overflow-hidden rounded-full">
+            <img
+                src="/logo.png"
+                alt="ShareMitra Logo"
+                className="w-full h-full object-cover"
+              />
+          </div>
+          <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-2xl font-bold text-transparent">
+            ShareMitra
+          </span>
+        </Link>
 
-          <div className="flex items-center space-x-3">
-            {isLoggedIn ? (
-              <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2 bg-white text-gray-800 hover:bg-gray-100 cursor-pointer">
-                    <User className="h-4 w-4" /> {fullName}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-[320px] sm:w-[380px] bg-white flex flex-col">
-                  <SheetHeader className="p-4">
-                    <SheetTitle className="text-lg font-semibold">Profile</SheetTitle>
-                  </SheetHeader>
-                  <div className="flex-1 overflow-auto p-4 space-y-4">
-                    <div>
-                      <Label>Name</Label>
-                      <Input disabled value={fullName} className="bg-gray-50" />
-                    </div>
-                    <div>
-                      <Label>Email</Label>
-                      <Input disabled value={client.email} className="bg-gray-50" />
-                    </div>
-                    {!showEmailForm ? (
-                      <Button onClick={() => setShowEmailForm(true)} className="w-full bg-emerald-600 text-white cursor-pointer hover:bg-emerald-700">
-                        Update Email
-                      </Button>
-                    ) : !showEmailOtpForm ? (
-                      <form onSubmit={handleEmailSubmit} className="space-y-4">
-                        <div>
-                          <Label>New Email</Label>
-                          <Input type="email" required value={newEmail} onChange={e => setNewEmail(e.target.value)} />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button type="submit" disabled={isSendingOtp} className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 cursor-pointer">
-                            {isSendingOtp ? 'Sending…' : 'Send OTP'}
-                          </Button>
-                          <Button variant="outline" className="flex-1 bg-red-600 text-white hover:bg-red-700 cursor-pointer" onClick={() => { setShowEmailForm(false); setEmailOtp(''); }}>
-                            Cancel
-                          </Button>
-                        </div>
-                      </form>
-                    ) : (
-                      <form onSubmit={handleEmailOtpSubmit} className="space-y-4">
-                        <div>
-                          <Label>Enter OTP</	Label>
-                          <Input type="text" required value={emailOtp} onChange={e => setEmailOtp(e.target.value)} />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button type="submit" className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer">
-                            Verify OTP
-                          </Button>
-                          <Button variant="outline" className="flex-1 bg-red-600 text-white hover:bg-red-700 cursor-pointer" onClick={() => { setShowEmailForm(false); setShowEmailOtpForm(false); setEmailOtp(''); }}>
-                            Cancel
-                          </Button>
-                        </div>
-                      </form>
-                    )}
-                  </div>
-                  <SheetFooter className="p-4">
-                    <Button variant="destructive" onClick={logout} className="w-full bg-red-600 text-white hover:bg-red-700 cursor-pointer">
-                      <LogOut className="h-4 w-4 mr-2" /> Logout
-                    </Button>
-                  </SheetFooter>
-                </SheetContent>
-              </Sheet>
-            ) : (
-              <Link href="/login">
-                <Button variant="outline" size="sm" className="bg-gradient-to-r from-emerald-600 to-green-600 text-white gap-2 hover:from-emerald-700 hover:to-green-700 cursor-pointer">
-                  <LogIn className="h-4 w-4" /> Login
-                </Button>
-              </Link>
-            )}
-
-            <Link href="/services">
-              <Button variant="outline" size="sm" className="bg-emerald-600 to-pink-600 text-white gap-2 hover:from-emerald-700 hover:to-pink-700 cursor-pointer">
+        {/* Right‑hand group: nav (desktop) + profile/login */}
+        <div className="flex items-center space-x-3">
+          {/* Desktop nav */}
+          <nav className="mr-2 hidden items-center space-x-4 lg:space-x-6 md:flex">
+            <Link
+              href="/about"
+              className="flex items-center gap-1 text-gray-700 transition-colors hover:text-emerald-600"
+              aria-label="About Us"
+            >
+              <Info className="h-4 w-4" /> About Us
+            </Link>
+            <Link
+              href="/contactus"
+              className="flex items-center gap-1 text-gray-700 transition-colors hover:text-emerald-600"
+              aria-label="Contact Us"
+            >
+              <Mail className="h-4 w-4" /> Contact Us
+            </Link>
+            <Link href="/services" aria-label="Services">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
+              >
                 Services
               </Button>
             </Link>
-          </div>
-        </div>
-      </header>
+          </nav>
 
+          {/* Profile / Login */}
+          {isLoggedIn ? (
+            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 bg-white text-gray-800 hover:bg-gray-100"
+                  aria-label="User Menu"
+                >
+                  <User className="h-4 w-4" /> {fullName}
+                </Button>
+              </SheetTrigger>
+              <SheetContent
+                side="right"
+                className="flex w-[320px] flex-col bg-white sm:w-[380px]"
+              >
+                <SheetHeader className="p-4">
+                  <SheetTitle className="text-lg font-semibold">Profile</SheetTitle>
+                </SheetHeader>
+                <div className="flex-1 space-y-4 overflow-auto p-4">
+                  <div>
+                    <Label className="mb-1">Name</Label>
+                    <Input disabled value={fullName} className="bg-gray-50" />
+                  </div>
+                  <div>
+                    <Label className="mb-1">Email</Label>
+                    <Input disabled value={client.email} className="bg-gray-50" />
+                  </div>
+
+                  {!showPasswordForm ? (
+                    <Button
+                      onClick={() => setShowPasswordForm(true)}
+                      className="w-full cursor-pointer bg-emerald-600 text-white hover:bg-emerald-700"
+                    >
+                      Update Password
+                    </Button>
+                  ) : (
+                    <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                      <div>
+                        <Label className="mb-1">Old Password</Label>
+                        <Input
+                          type="password"
+                          required
+                          value={oldPassword}
+                          onChange={(e) => setOldPassword(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="mb-1">New Password</Label>
+                        <Input
+                          type="password"
+                          required
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="submit"
+                          disabled={isUpdatingPassword}
+                          className="flex-1 cursor-pointer bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          {isUpdatingPassword ? "Updating…" : "Save"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex-1 cursor-pointer bg-red-600 text-white hover:bg-red-700"
+                          onClick={() => {
+                            setShowPasswordForm(false);
+                            setOldPassword("");
+                            setNewPassword("");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+                <SheetFooter className="p-4">
+                  <Button
+                    variant="destructive"
+                    onClick={logout}
+                    className="w-full cursor-pointer bg-red-600 text-white hover:bg-red-700"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" /> Logout
+                  </Button>
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
+          ) : (
+            <Link href="/login" aria-label="Login">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700"
+              >
+                <LogIn className="h-4 w-4" /> Login
+              </Button>
+            </Link>
+          )}
+        </div>
+      </div>
+    </header>
       {/* Hero Section */}
       <section className="relative overflow-hidden py-20 lg:py-32 text-center">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 to-green-600/10" />
@@ -482,9 +549,8 @@ export default function Home() {
               <h4 className="font-semibold mb-4">Company</h4>
               <ul className="space-y-2 text-gray-400 ">
                 <li className='cursor-pointer' onClick={() => router.push('/about')}>About Us</li>
-                <li className='cursor-pointer' onClick={()=> router.push('/contactus')}>Contact</li>
-                <li>FAQ</li>
-                
+                <li className='cursor-pointer' onClick={() => router.push('/contactus')}>Contact</li>
+                <li className='cursor-pointer' onClick={() => router.push('/faqs')}>FAQ</li>
               </ul>
             </div>
 
