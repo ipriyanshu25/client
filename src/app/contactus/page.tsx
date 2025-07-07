@@ -62,7 +62,7 @@ export default function ContactPage() {
     };
 
     const infoItems = [
-        { label: 'Email', value: 'support@sharemitra.com' },
+        { label: 'Email', value: 'care@sharemitra.com' },
         { label: 'Phone', value: '+1 (800) 123-4567' },
         { label: 'Address', value: '123 Green St, Suite 100, San Francisco, CA' },
         { label: 'Hours', value: 'Mon–Fri: 9am – 6pm; Sat–Sun: Closed' },
