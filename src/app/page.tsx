@@ -186,9 +186,9 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-50 ">
       {/* HEADER */}
-      <header className="relative z-50 border-b border-white/20 bg-white/80 backdrop-blur-md">
+      <header className="fixed inset-x-0 top-0 z-50 w-full border-b border-white/20 bg-white/80 backdrop-blur-md">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           {/* Logo + brand */}
           <Link href="/" className="flex items-center space-x-3">
