@@ -140,35 +140,6 @@ export default function Dashboard() {
     : "";
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString("en-IN");
 
-  const handleDelete = async (campaignId: string) => {
-    const result = await Swal.fire({
-      title: "Delete Campaign?",
-      text: "This cannot be undone.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Yes, delete",
-      cancelButtonText: "Cancel",
-      reverseButtons: true,
-    });
-    if (!result.isConfirmed) return;
-    try {
-      const token = localStorage.getItem("token");
-      await api.post(
-        "/campaign/delete",
-        { campaignId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setCampaigns((prev) => prev.filter((c) => c.campaignId !== campaignId));
-      setFilteredCampaigns((prev) => prev.filter((c) => c.campaignId !== campaignId));
-      toast({ title: "Deleted!", text: "Campaign removed.", icon: "success" });
-    } catch (err: any) {
-      toast({
-        title: "Error",
-        text: err.response?.data?.message || "Delete failed.",
-        icon: "error",
-      });
-    }
-  };
 
   /* -------------------------- PASSWORD FLOW ------------------------- */
   const handlePasswordSubmit = async (e: React.FormEvent) => {
@@ -461,11 +432,6 @@ export default function Dashboard() {
                           <span className="text-sm font-semibold">Total: ${c.totalAmount}</span>
                         </div>
                         <p className="text-xs text-gray-400">Created on {formatDate(c.createdAt)}</p>
-                        <div className="mt-2 flex gap-2">
-                          <Button size="sm" variant="destructive" onClick={() => handleDelete(c.campaignId)}>
-                            Delete
-                          </Button>
-                        </div>
                       </div>
                     </CardContent>
                   </Card>
