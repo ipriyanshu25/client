@@ -1,4 +1,3 @@
-// Updated: app/admin/campaign/page.tsx
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -23,6 +22,7 @@ interface Campaign {
   actions: CampaignAction[];
   totalAmount: number;
   createdAt: string;
+  status: number; // 0 = pending, 1 = completed
 }
 
 export default function AdminCampaignPage() {
@@ -32,6 +32,10 @@ export default function AdminCampaignPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  // Status constants
+  const STATUS = { PENDING: 0, COMPLETED: 1 };
 
   useEffect(() => {
     if (!localStorage.getItem('adminId')) {
@@ -63,7 +67,28 @@ export default function AdminCampaignPage() {
     });
 
   const toggleExpand = (id: string) => {
-    setExpandedId(prev => (prev === id ? null : id));
+    setExpandedId((prev) => (prev === id ? null : id));
+  };
+
+  const handleStatusUpdate = async (campaignId: string, status: number) => {
+    setUpdatingId(campaignId);
+    try {
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}admin/updatestauts`,
+        { campaignId, status }
+      );
+      Swal.fire('Success', 'Campaign status updated', 'success');
+      setCampaigns((prev) =>
+        prev.map((c) =>
+          c.campaignId === campaignId ? { ...c, status } : c
+        )
+      );
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', 'Failed to update status', 'error');
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   // Filter campaigns by index or text
@@ -96,9 +121,9 @@ export default function AdminCampaignPage() {
         <Button
           size="icon"
           variant="outline"
-          onClick={() => setShowSearch(prev => !prev)}
+          onClick={() => setShowSearch((prev) => !prev)}
           aria-label="Toggle search"
-          className="h-8 w-8 p-0 text-emerald-600 cursor-pointer hover:bg-emerald-100 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+          className="h-8 w-8 p-0 text-emerald-600 hover:bg-emerald-100"
         >
           <Search className="h-4 w-4" />
         </Button>
@@ -109,7 +134,7 @@ export default function AdminCampaignPage() {
           <input
             type="text"
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search"
             className="w-full max-w-sm p-2 border rounded-md"
           />
@@ -129,6 +154,7 @@ export default function AdminCampaignPage() {
                 <th className="py-3 px-6 text-left">URL</th>
                 <th className="py-3 px-6 text-right">Total ($)</th>
                 <th className="py-3 px-6 text-left">Created On</th>
+                <th className="py-3 px-6 text-center">Status</th>
                 <th className="py-3 px-6 text-center">Action</th>
               </tr>
             </thead>
@@ -153,6 +179,20 @@ export default function AdminCampaignPage() {
                     </td>
                     <td className="py-4 px-6 text-right">${c.totalAmount}</td>
                     <td className="py-4 px-6">{formatDate(c.createdAt)}</td>
+                    <td className="py-4 px-6 text-center cursor-pointer">
+                      {c.status === STATUS.PENDING ? (
+                        <Button
+                        className='cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white'
+                          size="sm"
+                          disabled={updatingId === c.campaignId}
+                          onClick={() => handleStatusUpdate(c.campaignId, STATUS.COMPLETED)}
+                        >
+                          Mark Completed
+                        </Button>
+                      ) : (
+                        <span className="text-green-600 font-medium">Completed</span>
+                      )}
+                    </td>
                     <td className="py-4 px-6 text-center">
                       <Button
                         size="icon"
@@ -170,7 +210,7 @@ export default function AdminCampaignPage() {
                   </tr>
                   {expandedId === c.campaignId && (
                     <tr>
-                      <td colSpan={7} className="bg-gray-50 px-6 py-4">
+                      <td colSpan={8} className="bg-gray-50 px-6 py-4">
                         <div className="overflow-x-auto">
                           <table className="min-w-full text-sm">
                             <thead>
@@ -181,16 +221,11 @@ export default function AdminCampaignPage() {
                               </tr>
                             </thead>
                             <tbody>
-                              {c.actions.map(a => (
-                                <tr
-                                  key={`${c.campaignId}-${a.contentId}`}
-                                  className="border-t"
-                                >
+                              {c.actions.map((a) => (
+                                <tr key={`${c.campaignId}-${a.contentId}`} className="border-t">
                                   <td className="py-2">{a.contentKey}</td>
                                   <td className="py-2 text-center">{a.quantity}</td>
-                                  <td className="py-2 text-right">
-                                    ${a.totalCost}
-                                  </td>
+                                  <td className="py-2 text-right">${a.totalCost}</td>
                                 </tr>
                               ))}
                             </tbody>

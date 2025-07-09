@@ -54,6 +54,7 @@ interface Campaign {
   actions: CampaignAction[];
   totalAmount: number;
   createdAt: string;
+  status: number; // 0 = pending, 1 = completed
 }
 
 /* ------------------------------------------------------------------ */
@@ -66,6 +67,15 @@ const toast = (opts: SweetAlertOptions) =>
     timer: 2000,
     timerProgressBar: true,
   });
+
+// human‐readable status text
+function getStatusText(status: number) {
+  return status === 1 ? "Completed" : "Pending";
+}
+// color class for badge
+function getStatusClass(status: number) {
+  return status === 1 ? "text-green-600" : "text-yellow-600";
+}
 
 /* ------------------------------------------------------------------ */
 /*                               MAIN                                 */
@@ -80,7 +90,7 @@ export default function Dashboard() {
   });
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  /* Password‑update flow */
+  /* Password-update flow */
   const [showPassForm, setShowPassForm] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -138,8 +148,8 @@ export default function Dashboard() {
   const fullName = client.name.firstName
     ? `${client.name.firstName} ${client.name.lastName}`
     : "";
-  const formatDate = (iso: string) => new Date(iso).toLocaleDateString("en-IN");
-
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-IN");
 
   /* -------------------------- PASSWORD FLOW ------------------------- */
   const handlePasswordSubmit = async (e: React.FormEvent) => {
@@ -191,8 +201,7 @@ export default function Dashboard() {
   const toggleExpand = (id: string) => {
     setExpandedCampaigns((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
   };
@@ -362,37 +371,44 @@ export default function Dashboard() {
 
         {/* ------------------------- Campaign Cards --------------------- */}
         {loading ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-64 bg-gray-200 rounded-lg animate-pulse" />
-            ))}
-          </div>
+          /* Loading skeleton... */
+          <div>Loading...</div>
         ) : filteredCampaigns.length === 0 ? (
           <p className="text-center text-gray-500">No campaigns found.</p>
         ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl"
-          >
+          <motion.div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl">
             {filteredCampaigns.map((c, idx) => {
               const isExpanded = expandedCampaigns.has(c.campaignId);
-              const actionsToShow = isExpanded ? c.actions : c.actions.slice(0, MAX_VISIBLE);
+              const actionsToShow = isExpanded
+                ? c.actions
+                : c.actions.slice(0, MAX_VISIBLE);
+
               return (
                 <motion.div key={c.campaignId} whileHover={{ scale: 1.02 }}>
                   <Card className="bg-white shadow hover:shadow-lg transition h-full flex flex-col">
                     <CardContent className="flex-1 flex flex-col justify-between">
                       <div>
-                        <h3 className="text-lg font-medium mb-2">
+                        {/* Title */}
+                        <h3 className="text-lg font-medium mb-1">
                           {idx + 1}. {c.serviceHeading}
                         </h3>
+
+                       
+
+                        {/* Link */}
                         <p className="truncate mb-4">
                           <span className="font-semibold">Link:</span>{" "}
-                          <a href={c.link} target="_blank" rel="noreferrer" className="text-blue-600 underline">
+                          <a
+                            href={c.link}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-blue-600 underline"
+                          >
                             {c.link}
                           </a>
                         </p>
 
+                        {/* Actions table */}
                         <table className="w-full mb-2 text-sm">
                           <thead>
                             <tr className="text-left text-gray-500">
@@ -406,32 +422,51 @@ export default function Dashboard() {
                               <tr key={a.contentId} className="border-t">
                                 <td className="px-2 py-1">{a.contentKey}</td>
                                 <td className="px-2 py-1">{a.quantity}</td>
-                                <td className="px-2 py-1 font-semibold">${a.totalCost}</td>
+                                <td className="px-2 py-1 font-semibold">
+                                  ${a.totalCost}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
 
+                        {/* Expand / collapse */}
                         {c.actions.length > MAX_VISIBLE && (
-                          <Button variant="link" className="flex items-center gap-1 mb-4" onClick={() => toggleExpand(c.campaignId)}>
+                          <Button
+                            variant="link"
+                            className="flex items-center gap-1 mb-4"
+                            onClick={() => toggleExpand(c.campaignId)}
+                          >
                             {isExpanded ? (
                               <>
                                 <ChevronUp className="w-4 h-4" /> Show Less
                               </>
                             ) : (
                               <>
-                                <ChevronDown className="w-4 h-4" /> Show {c.actions.length - MAX_VISIBLE} More
+                                <ChevronDown className="w-4 h-4" />{" "}
+                                Show {c.actions.length - MAX_VISIBLE} More
                               </>
                             )}
                           </Button>
                         )}
                       </div>
 
+                      {/* Footer: total & created date */}
                       <div className="mt-4">
                         <div className="flex justify-between items-center mb-1">
-                          <span className="text-sm font-semibold">Total: ${c.totalAmount}</span>
+                          <span className="text-sm font-semibold">
+                            Total: ${c.totalAmount}
+                          </span>
+                          <p className="text-sm mb-2">
+                            Status:{" "}
+                            <span className={getStatusClass(c.status)}>
+                              {getStatusText(c.status)}
+                            </span>
+                          </p>
                         </div>
-                        <p className="text-xs text-gray-400">Created on {formatDate(c.createdAt)}</p>
+                        <p className="text-xs text-gray-400">
+                          Created on {formatDate(c.createdAt)}
+                        </p>
                       </div>
                     </CardContent>
                   </Card>

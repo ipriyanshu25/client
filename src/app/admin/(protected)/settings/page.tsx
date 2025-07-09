@@ -13,7 +13,6 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
-
 import api from '@/lib/api';
 
 interface JWTPayload {
@@ -25,8 +24,9 @@ interface JWTPayload {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const token = localStorage.getItem('adminToken') || '';
+  const token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') || '' : '';
   let adminId = '';
+
   try {
     const decoded = jwtDecode<JWTPayload>(token);
     adminId = decoded.adminId;
@@ -46,15 +46,12 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loadingPassword, setLoadingPassword] = useState(false);
 
-  // Request OTP for email change
   const handleEmailRequest = async () => {
     if (!newEmail) {
-      await Swal.fire('Error', 'Please enter a new email.', 'warning');
-      return;
+      return Swal.fire('Warning', 'Please enter a valid email address.', 'warning');
     }
     if (!adminId) {
-      await Swal.fire('Error', 'Not authenticated. Please log in again.', 'error');
-      return;
+      return Swal.fire('Error', 'Authentication expired. Please log in again.', 'error');
     }
     setLoadingEmail(true);
     try {
@@ -68,23 +65,18 @@ export default function SettingsPage() {
     }
   };
 
-  // Verify OTP and update email
   const handleEmailVerify = async () => {
     if (!emailOtp) {
-      await Swal.fire('Error', 'Please enter the OTP.', 'warning');
-      return;
+      return Swal.fire('Warning', 'Please enter the OTP.', 'warning');
     }
     if (!adminId) {
-      await Swal.fire('Error', 'Not authenticated. Please log in again.', 'error');
-      return;
+      return Swal.fire('Error', 'Authentication expired. Please log in again.', 'error');
     }
     setLoadingEmail(true);
     try {
       const res = await api.post('/admin/update-email/verify', { adminId, otp: emailOtp });
-      if (res.data.token) {
-        localStorage.setItem('adminToken', res.data.token);
-      }
-      Swal.fire('Success', 'Email updated successfully.', 'success');
+      if (res.data.token) localStorage.setItem('adminToken', res.data.token);
+      Swal.fire('Success', 'Your email has been updated.', 'success');
       setNewEmail('');
       setEmailOtp('');
       setEmailStep('input');
@@ -96,24 +88,20 @@ export default function SettingsPage() {
     }
   };
 
-  // Update password flow
   const handlePasswordUpdate = async () => {
     if (!oldPassword || !newPassword) {
-      await Swal.fire('Error', 'Please fill in both passwords.', 'warning');
-      return;
+      return Swal.fire('Warning', 'Both current and new passwords are required.', 'warning');
     }
     if (newPassword !== confirmPassword) {
-      await Swal.fire('Error', 'New passwords do not match.', 'error');
-      return;
+      return Swal.fire('Error', 'New passwords do not match.', 'error');
     }
     if (!adminId) {
-      await Swal.fire('Error', 'Not authenticated. Please log in again.', 'error');
-      return;
+      return Swal.fire('Error', 'Authentication expired. Please log in again.', 'error');
     }
     setLoadingPassword(true);
     try {
       await api.post('/admin/update-password', { adminId, oldPassword, newPassword });
-      Swal.fire('Success', 'Password updated successfully.', 'success');
+      Swal.fire('Success', 'Your password has been updated.', 'success');
       setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -125,115 +113,126 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-green-100 p-6">
-      <div className="w-full max-w-lg space-y-6">
-        {/* Email Update Card */}
-        <Card className="shadow-xl rounded-2xl">
-          <CardHeader className="bg-white border-b">
-            <CardTitle className="text-xl font-semibold text-gray-800 text-center">
-              Update Email
-            </CardTitle>
-            <CardDescription className="text-center text-gray-500">
-              Change your login email
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-6 space-y-4">
-            {emailStep === 'input' ? (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="new-email">New Email</Label>
-                  <Input
-                    id="new-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                  />
-                </div>
-                <Button
-                  onClick={handleEmailRequest}
-                  disabled={loadingEmail}
-                  className="w-full py-2 cursor-pointer bg-green-600 hover:bg-green-700 text-white"
-                >
-                  {loadingEmail ? 'Sending OTP…' : 'Send OTP'}
-                </Button>
-              </>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="email-otp">OTP</Label>
-                  <Input
-                    id="email-otp"
-                    type="text"
-                    placeholder="Enter OTP"
-                    value={emailOtp}
-                    onChange={(e) => setEmailOtp(e.target.value)}
-                  />
-                </div>
-                <Button
-                  onClick={handleEmailVerify}
-                  disabled={loadingEmail}
-                  className="w-full py-2 cursor-pointer bg-green-600 hover:bg-green-700 text-white"
-                >
-                  {loadingEmail ? 'Verifying…' : 'Verify & Update'}
-                </Button>
-              </>
-            )}
-          </CardContent>
-        </Card>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
+      <div className="w-full max-w-4xl">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-extrabold text-gray-900">Admin Settings</h1>
+          <p className="mt-2 text-lg text-gray-600">Manage your account and security preferences</p>
+        </div>
 
-        {/* Password Update Card */}
-        <Card className="shadow-xl rounded-2xl">
-          <CardHeader className="bg-white border-b">
-            <CardTitle className="text-xl font-semibold text-gray-800 text-center">
-              Update Password
-            </CardTitle>
-            <CardDescription className="text-center text-gray-500">
-              Change your account password
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="old-password">Current Password</Label>
-              <Input
-                id="old-password"
-                type="password"
-                placeholder="••••••••"
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-password">New Password</Label>
-              <Input
-                id="new-password"
-                type="password"
-                placeholder="••••••••"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-            </div>
-            {newPassword && (
+        <div className="grid gap-8 md:grid-cols-2">
+          {/* Email Update Card */}
+          <Card className="shadow-lg border border-gray-200 rounded-2xl">
+            <CardHeader className="bg-white border-b px-6 py-4">
+              <CardTitle className="text-2xl font-semibold text-gray-800 text-center">
+                Update Email
+              </CardTitle>
+              <CardDescription className="text-center text-gray-500">
+                Change your login email address
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              {emailStep === 'input' ? (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-email">New Email</Label>
+                    <Input
+                      id="new-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    onClick={handleEmailRequest}
+                    disabled={loadingEmail}
+                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                  >
+                    {loadingEmail ? 'Sending OTP…' : 'Send OTP'}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="email-otp">Enter OTP</Label>
+                    <Input
+                      id="email-otp"
+                      type="text"
+                      placeholder="One-time code"
+                      value={emailOtp}
+                      onChange={(e) => setEmailOtp(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    onClick={handleEmailVerify}
+                    disabled={loadingEmail}
+                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                  >
+                    {loadingEmail ? 'Verifying…' : 'Verify & Update'}
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Password Update Card */}
+          <Card className="shadow-lg border border-gray-200 rounded-2xl">
+            <CardHeader className="bg-white border-b px-6 py-4">
+              <CardTitle className="text-2xl font-semibold text-gray-800 text-center">
+                Update Password
+              </CardTitle>
+              <CardDescription className="text-center text-gray-500">
+                Secure your account by changing your password
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm New Password</Label>
+                <Label htmlFor="old-password">Current Password</Label>
                 <Input
-                  id="confirm-password"
+                  id="old-password"
                   type="password"
                   placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
                 />
               </div>
-            )}
-            <Button
-              onClick={handlePasswordUpdate}
-              disabled={loadingPassword}
-              className="w-full py-2 cursor-pointer bg-green-600 hover:bg-green-700 text-white"
-            >
-              {loadingPassword ? 'Updating…' : 'Update Password'}
-            </Button>
-          </CardContent>
-        </Card>
+
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+              </div>
+
+              {newPassword && (
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm New Password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                </div>
+              )}
+
+              <Button
+                onClick={handlePasswordUpdate}
+                disabled={loadingPassword}
+                className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+              >
+                {loadingPassword ? 'Updating…' : 'Update Password'}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

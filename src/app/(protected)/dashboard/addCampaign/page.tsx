@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import Swal from 'sweetalert2';
 
 interface ServiceContentItem {
   contentId: string;
@@ -17,9 +18,8 @@ interface ServiceOption {
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-// const RAZORPAY_KEY = 'rzp_live_GngmINuJmpWywN';
-const RAZORPAY_KEY = 'rzp_test_2oIQzZ7i0uQ6sn';
-
+// const RAZORPAY_KEY = 'rzp_test_2oIQzZ7i0uQ6sn';
+const RAZORPAY_KEY = 'rzp_live_GngmINuJmpWywN';
 
 export default function CreateCampaign() {
   const [serviceOptions, setServiceOptions] = useState<ServiceOption[]>([]);
@@ -29,7 +29,6 @@ export default function CreateCampaign() {
   const [services, setServices] = useState<{ [id: string]: number }>({});
   const [totalAmount, setTotalAmount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -40,8 +39,13 @@ export default function CreateCampaign() {
         if (!res.ok) throw new Error(json.error || 'Failed to load services');
         setServiceOptions(json.data);
       } catch (e: any) {
-        console.error(e);
-        setError('Could not load platform options.');
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: e.message || 'Could not load platform options.',
+          timer: 1000,
+          showConfirmButton: false,
+        });
       }
     })();
   }, []);
@@ -78,11 +82,16 @@ export default function CreateCampaign() {
   const handlePayment = async () => {
     if (!serviceId || !postLink || totalAmount === 0) return;
     setLoading(true);
-    setError(null);
 
     const sdkOk = await loadRazorpay();
     if (!sdkOk) {
-      setError('Payment gateway failed to load.');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Payment gateway failed to load.',
+        timer: 1000,
+        showConfirmButton: false,
+      });
       setLoading(false);
       return;
     }
@@ -127,9 +136,22 @@ export default function CreateCampaign() {
             const campJson = await campRes.json();
             if (!campRes.ok) throw new Error(campJson.message || 'Campaign creation failed');
 
+            await Swal.fire({
+              icon: 'success',
+              title: 'Success',
+              text: 'Campaign created successfully!',
+              timer: 1000,
+              showConfirmButton: false,
+            });
             router.push('/dashboard');
           } catch (e: any) {
-            setError(e.message);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: e.message,
+              timer: 1000,
+              showConfirmButton: false,
+            });
           } finally {
             setLoading(false);
           }
@@ -139,7 +161,13 @@ export default function CreateCampaign() {
       };
       new (window as any).Razorpay(options).open();
     } catch (e: any) {
-      setError(e.message);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: e.message,
+        timer: 1000,
+        showConfirmButton: false,
+      });
       setLoading(false);
     }
   };
@@ -150,7 +178,6 @@ export default function CreateCampaign() {
     setServices(prev => ({ ...prev, [name]: qty }));
   }
 
-  /* -------------------------------- UI -------------------------------- */
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-50">
       <header className="sticky top-0 z-50 border-b border-white/20 bg-white/70 backdrop-blur-lg shadow-sm">
@@ -177,8 +204,6 @@ export default function CreateCampaign() {
           <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
             Create New Campaign
           </h1>
-
-          {error && <p className="text-center text-red-600 font-medium mb-6">{error}</p>}
 
           {/* Platform */}
           <div className="mb-6">
