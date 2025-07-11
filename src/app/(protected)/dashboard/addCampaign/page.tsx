@@ -18,7 +18,7 @@ interface ServiceOption {
   serviceContent: ServiceContentItem[];
 }
 
-const RAZORPAY_KEY = 'rzp_test_2oIQzZ7i0uQ6sn';
+const RAZORPAY_KEY = 'rzp_live_GngmINuJmpWywN';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 
