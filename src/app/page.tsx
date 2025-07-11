@@ -241,95 +241,15 @@ export default function Home() {
 
             {/* Profile / Login */}
             {isLoggedIn ? (
-              <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                <SheetTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 bg-white text-gray-800 hover:bg-gray-100"
-                    aria-label="User Menu"
-                  >
-                    <User className="h-4 w-4" /> {fullName}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent
-                  side="right"
-                  className="flex w-[320px] flex-col bg-white sm:w-[380px]"
-                >
-                  <SheetHeader className="p-4">
-                    <SheetTitle className="text-lg font-semibold">Profile</SheetTitle>
-                  </SheetHeader>
-                  <div className="flex-1 space-y-4 overflow-auto p-4">
-                    <div>
-                      <Label className="mb-1">Name</Label>
-                      <Input disabled value={fullName} className="bg-gray-50" />
-                    </div>
-                    <div>
-                      <Label className="mb-1">Email</Label>
-                      <Input disabled value={client.email} className="bg-gray-50" />
-                    </div>
-
-                    {!showPasswordForm ? (
-                      <Button
-                        onClick={() => setShowPasswordForm(true)}
-                        className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
-                      >
-                        Update Password
-                      </Button>
-                    ) : (
-                      <form onSubmit={handlePasswordSubmit} className="space-y-4">
-                        <div>
-                          <Label className="mb-1">Old Password</Label>
-                          <Input
-                            type="password"
-                            required
-                            value={oldPassword}
-                            onChange={(e) => setOldPassword(e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label className="mb-1">New Password</Label>
-                          <Input
-                            type="password"
-                            required
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            type="submit"
-                            disabled={isUpdatingPassword}
-                            className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
-                          >
-                            {isUpdatingPassword ? "Updating…" : "Save"}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            className="flex-1 bg-red-600 text-white hover:bg-red-700"
-                            onClick={() => {
-                              setShowPasswordForm(false);
-                              setOldPassword("");
-                              setNewPassword("");
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </form>
-                    )}
-                  </div>
-                  <SheetFooter className="p-4">
-                    <Button
-                      variant="destructive"
-                      onClick={logout}
-                      className="w-full bg-red-600 text-white hover:bg-red-700 cursor-pointer "
-                    >
-                      <LogOut className="mr-2 h-4 w-4" /> Logout
-                    </Button>
-                  </SheetFooter>
-                </SheetContent>
-              </Sheet>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 bg-white text-gray-800 hover:bg-gray-100"
+                aria-label="User Menu"
+                 onClick={() => router.push('/dashboard')}
+              >
+                <User className="h-4 w-4" /> {fullName}
+              </Button>
             ) : null}
           </div>
         </div>

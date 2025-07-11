@@ -148,7 +148,7 @@ export default function SettingsPage() {
                   <Button
                     onClick={handleEmailRequest}
                     disabled={loadingEmail}
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                    className="w-full py-2 bg-green-600 hover:bg-green-700 text-white font-medium"
                   >
                     {loadingEmail ? 'Sending OTP…' : 'Send OTP'}
                   </Button>
@@ -168,7 +168,7 @@ export default function SettingsPage() {
                   <Button
                     onClick={handleEmailVerify}
                     disabled={loadingEmail}
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                    className="w-full py-2 bg-green-600 hover:bg-green-700 text-white font-medium"
                   >
                     {loadingEmail ? 'Verifying…' : 'Verify & Update'}
                   </Button>
@@ -226,7 +226,7 @@ export default function SettingsPage() {
               <Button
                 onClick={handlePasswordUpdate}
                 disabled={loadingPassword}
-                className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                className="w-full py-2 bg-green-600 hover:bg-green-700 text-white font-medium"
               >
                 {loadingPassword ? 'Updating…' : 'Update Password'}
               </Button>

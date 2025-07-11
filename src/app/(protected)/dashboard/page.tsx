@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import Swal, { SweetAlertOptions } from "sweetalert2";
 import {
   Sheet,
@@ -14,7 +13,6 @@ import {
   SheetTitle,
   SheetFooter,
 } from "@/components/ui/sheet";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -22,19 +20,15 @@ import {
   User,
   LogOut,
   Plus,
-  ChevronUp,
-  ChevronDown,
   Search,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  Menu,
 } from "lucide-react";
 
-/* ------------------------------------------------------------------ */
-/*                            API INSTANCE                            */
-/* ------------------------------------------------------------------ */
 const api = axios.create({ baseURL: process.env.NEXT_PUBLIC_API_URL });
 
-/* ------------------------------------------------------------------ */
-/*                              TYPES                                 */
-/* ------------------------------------------------------------------ */
 interface ClientProfile {
   name: { firstName: string; lastName: string };
   email: string;
@@ -57,9 +51,6 @@ interface Campaign {
   status: number; // 0 = pending, 1 = completed
 }
 
-/* ------------------------------------------------------------------ */
-/*                              HELPERS                               */
-/* ------------------------------------------------------------------ */
 const toast = (opts: SweetAlertOptions) =>
   Swal.fire({
     ...opts,
@@ -68,43 +59,31 @@ const toast = (opts: SweetAlertOptions) =>
     timerProgressBar: true,
   });
 
-// human‐readable status text
 function getStatusText(status: number) {
   return status === 1 ? "Completed" : "Pending";
 }
-// color class for badge
-function getStatusClass(status: number) {
-  return status === 1 ? "text-green-600" : "text-yellow-600";
-}
 
-/* ------------------------------------------------------------------ */
-/*                               MAIN                                 */
-/* ------------------------------------------------------------------ */
 export default function Dashboard() {
   const router = useRouter();
-
-  /* ------------------------------ STATE ----------------------------- */
   const [client, setClient] = useState<ClientProfile>({
     name: { firstName: "", lastName: "" },
     email: "",
   });
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-
-  /* Password-update flow */
+  const [isSheetOpen, setIsSheetOpen] = useState(false);           // Profile sheet
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile nav sheet
   const [showPassForm, setShowPassForm] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [updatingPass, setUpdatingPass] = useState(false);
-
-  /* Campaigns + UI */
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [filteredCampaigns, setFilteredCampaigns] = useState<Campaign[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const toggleExpand = (id: string) =>
+    setExpandedId((prev) => (prev === id ? null : id));
 
-  /* ----------------------------- EFFECTS ---------------------------- */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const clientId = localStorage.getItem("clientId");
@@ -112,7 +91,6 @@ export default function Dashboard() {
       router.push("/login");
       return;
     }
-
     (async () => {
       try {
         const [profileRes, campaignRes] = await Promise.all([
@@ -122,7 +100,7 @@ export default function Dashboard() {
             { headers: { Authorization: `Bearer ${token}` } }
           ),
           api.post<{ campaigns: Campaign[] }>(
-            "/campaign/getByClient",
+            "/campaign/active",
             { clientId },
             { headers: { Authorization: `Bearer ${token}` } }
           ),
@@ -138,7 +116,6 @@ export default function Dashboard() {
     })();
   }, [router]);
 
-  /* ---------------------------- HANDLERS ---------------------------- */
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("clientId");
@@ -148,10 +125,14 @@ export default function Dashboard() {
   const fullName = client.name.firstName
     ? `${client.name.firstName} ${client.name.lastName}`
     : "";
-  const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString("en-IN");
 
-  /* -------------------------- PASSWORD FLOW ------------------------- */
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUpdatingPass(true);
@@ -178,11 +159,10 @@ export default function Dashboard() {
     }
   };
 
-  /* ----------------------------- SEARCH ----------------------------- */
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value.trim();
     setSearchQuery(q);
-    if (q === "") {
+    if (!q) {
       setFilteredCampaigns(campaigns);
       return;
     }
@@ -192,50 +172,69 @@ export default function Dashboard() {
       setFilteredCampaigns(campaign ? [campaign] : []);
       return;
     }
-    const filtered = campaigns.filter((c) =>
-      c.serviceHeading.toLowerCase().includes(q.toLowerCase())
+    setFilteredCampaigns(
+      campaigns.filter((c) =>
+        c.serviceHeading.toLowerCase().includes(q.toLowerCase())
+      )
     );
-    setFilteredCampaigns(filtered);
   };
 
-  const toggleExpand = (id: string) => {
-    setExpandedCampaigns((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  const downloadInvoice = async (
+    campaignId: string,
+    serviceHeading?: string
+  ) => {
+    const token = localStorage.getItem("token");
+    try {
+      const response = await api.post(
+        "/invoice/download",
+        { campaignId },
+        { headers: { Authorization: `Bearer ${token}` }, responseType: "blob" }
+      );
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const raw = serviceHeading || "invoice";
+      link.setAttribute("download", `invoice_${raw}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", text: "Failed to download invoice", icon: "error" });
+    }
   };
 
-  const MAX_VISIBLE = 3;
-  const totalCount = filteredCampaigns.length;
-
-  /* ------------------------------------------------------------------ */
-  /*                                JSX                                 */
-  /* ------------------------------------------------------------------ */
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-emerald-50 to-green-50">
-      {/* --------------------------- HEADER --------------------------- */}
       <header className="sticky top-0 bg-white shadow-md z-10">
-        <div className="container mx-auto p-4 flex justify-between items-center">
+        <div className="container mx-auto px-4 sm:px-8 py-3 flex justify-between items-center">
           <Link href="/" className="flex items-center space-x-3">
-            <img src="/logo.png" alt="Logo" className="w-10 h-10 rounded-full" />
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="w-10 h-10 rounded-full"
+            />
             <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-green-600">
               ShareMitra
             </span>
           </Link>
-          <div className="flex items-center space-x-4">
-            {/* Profile Sheet */}
+
+          {/* Desktop: Profile + Logout */}
+          <div className="hidden md:flex items-center space-x-4">
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
               <SheetTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
                   className="flex items-center gap-2 bg-white hover:bg-gray-100"
+                  onClick={() => router.push('/dashboard')}
                 >
                   <User className="w-5 h-5" /> {fullName || "Profile"}
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80 bg-white flex flex-col">
+              <SheetContent side="right" className="w-full sm:w-80 bg-white flex flex-col">
                 <SheetHeader className="p-4">
                   <SheetTitle>Profile</SheetTitle>
                 </SheetHeader>
@@ -248,8 +247,6 @@ export default function Dashboard() {
                     <Label className="mb-1">Email</Label>
                     <Input disabled value={client.email} className="bg-gray-50" />
                   </div>
-
-                  {/* ------------------ PASSWORD UPDATE FLOW ------------------ */}
                   {!showPassForm ? (
                     <Button
                       onClick={() => setShowPassForm(true)}
@@ -311,7 +308,6 @@ export default function Dashboard() {
                 </SheetFooter>
               </SheetContent>
             </Sheet>
-            {/* Direct Logout button (mobile fallback) */}
             <Button
               variant="destructive"
               onClick={logout}
@@ -320,13 +316,50 @@ export default function Dashboard() {
               <LogOut className="w-5 h-5" /> Logout
             </Button>
           </div>
+
+          {/* Mobile: Hamburger */}
+          <div className="md:hidden">
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64 bg-white flex flex-col">
+                <SheetHeader className="p-4">
+                  <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
+                <div className="flex-1 p-4 space-y-4">
+                  <Button
+                    variant="secondary"
+                    className="w-full justify-start bg-green-500"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setIsSheetOpen(true);
+                    }}
+                  >
+                    <User className="w-5 h-5 mr-2 " /> Profile
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className=" w-full bg-red-600 text-white hover:bg-red-700 flex items-center gap-2"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      logout();
+                    }}
+                  >
+                    <LogOut className="w-5 h-5 mr-2" /> Logout
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </header>
 
-      {/* ----------------------------- MAIN ----------------------------- */}
-      <main className="container mx-auto p-8 flex-1 w-full">
+      <main className="container mx-auto px-4 sm:px-8 py-8 flex-1 w-full">
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-gray-900">
+          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">
             Welcome Back, {fullName || "User"}!
           </h1>
           <p className="text-gray-600 mt-2">
@@ -334,10 +367,8 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* ------------------ Campaign header (search, new) -------------- */}
-        <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-          <h2 className="text-2xl font-semibold">Your Campaigns</h2>
-
+        <div className="flex flex-col sm:flex-row flex-wrap justify-between items-center mb-6 gap-4">
+          <h2 className="text-2xl font-semibold">Active Campaigns</h2>
           <div className="flex items-center gap-3 ml-auto flex-wrap">
             {showSearch && (
               <Input
@@ -355,12 +386,14 @@ export default function Dashboard() {
             >
               <Search className="w-5 h-5" />
             </Button>
-            <Button
-              size="sm"
-              className="cursor-default bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700"
-            >
-              Total: {totalCount}
+            <Button size="sm" className="cursor-default bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700">
+              Total: {filteredCampaigns.length}
             </Button>
+            <Link href="/dashboard/previouscampaign">
+              <Button className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700">
+                Previous Campaigns
+              </Button>
+            </Link>
             <Link href="/dashboard/addCampaign">
               <Button className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700">
                 <Plus className="w-5 h-5" /> New Campaign
@@ -369,35 +402,34 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ------------------------- Campaign Cards --------------------- */}
         {loading ? (
-          /* Loading skeleton... */
           <div>Loading...</div>
         ) : filteredCampaigns.length === 0 ? (
           <p className="text-center text-gray-500">No campaigns found.</p>
         ) : (
-          <motion.div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl">
-            {filteredCampaigns.map((c, idx) => {
-              const isExpanded = expandedCampaigns.has(c.campaignId);
-              const actionsToShow = isExpanded
-                ? c.actions
-                : c.actions.slice(0, MAX_VISIBLE);
-
-              return (
-                <motion.div key={c.campaignId} whileHover={{ scale: 1.02 }}>
-                  <Card className="bg-white shadow hover:shadow-lg transition h-full flex flex-col">
-                    <CardContent className="flex-1 flex flex-col justify-between">
-                      <div>
-                        {/* Title */}
-                        <h3 className="text-lg font-medium mb-1">
-                          {idx + 1}. {c.serviceHeading}
-                        </h3>
-
-                       
-
-                        {/* Link */}
-                        <p className="truncate mb-4">
-                          <span className="font-semibold">Link:</span>{" "}
+          <>  {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full bg-white shadow-md rounded-lg">
+                <thead className="bg-emerald-600 text-white">
+                  <tr>
+                    <th className="py-3 px-6 text-center">S.No</th>
+                    <th className="py-3 px-6 text-center">Service</th>
+                    <th className="py-3 px-6 text-center">Link</th>
+                    <th className="py-3 px-6 text-center">Services</th>
+                    <th className="py-3 px-6 text-center">Total ($)</th>
+                    <th className="py-3 px-6 text-center">Status</th>
+                    <th className="py-3 px-6 text-center">Created On</th>
+                    <th className="py-3 px-6 text-center">Invoice</th>
+                    <th className="py-3 px-6 text-center">Expand</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCampaigns.map((c, idx) => (
+                    <React.Fragment key={c.campaignId}>
+                      <tr className="border-b hover:bg-gray-50 text-center">
+                        <td className="py-4 px-6">{idx + 1}</td>
+                        <td className="py-4 px-6">{c.serviceHeading}</td>
+                        <td className="py-4 px-6 truncate max-w-xs">
                           <a
                             href={c.link}
                             target="_blank"
@@ -406,80 +438,142 @@ export default function Dashboard() {
                           >
                             {c.link}
                           </a>
-                        </p>
-
-                        {/* Actions table */}
-                        <table className="w-full mb-2 text-sm">
-                          <thead>
-                            <tr className="text-left text-gray-500">
-                              <th className="px-2 py-1">Service</th>
-                              <th className="px-2 py-1">Qty</th>
-                              <th className="px-2 py-1">Total</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {actionsToShow.map((a) => (
-                              <tr key={a.contentId} className="border-t">
-                                <td className="px-2 py-1">{a.contentKey}</td>
-                                <td className="px-2 py-1">{a.quantity}</td>
-                                <td className="px-2 py-1 font-semibold">
-                                  ${a.totalCost}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-
-                        {/* Expand / collapse */}
-                        {c.actions.length > MAX_VISIBLE && (
-                          <Button
-                            variant="link"
-                            className="flex items-center gap-1 mb-4"
-                            onClick={() => toggleExpand(c.campaignId)}
+                        </td>
+                        <td className="py-4 px-6">{c.actions.length}</td>
+                        <td className="py-4 px-6 text-center">
+                          ${c.totalAmount.toFixed(2)}
+                        </td>
+                        <td className="py-4 px-6 text-center">
+                          <span
+                            className={
+                              c.status === 1
+                                ? "text-green-600 font-medium"
+                                : "text-yellow-600 font-medium"
+                            }
                           >
-                            {isExpanded ? (
-                              <>
-                                <ChevronUp className="w-4 h-4" /> Show Less
-                              </>
+                            {getStatusText(c.status)}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">{formatDate(c.createdAt)}</td>
+                        <td className="py-4 px-6 text-center flex justify-center">
+                          <Button
+                            size="sm"
+                            onClick={() => downloadInvoice(c.campaignId, c.serviceHeading)}
+                            className="flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 cursor-pointer"
+                          >
+                            <Download className="w-4 h-4" /> Invoice
+                          </Button>
+                        </td>
+                        <td className="py-4 px-6 text-center">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            onClick={() => toggleExpand(c.campaignId)}
+                            className="h-8 w-8 p-0 bg-blue-50 hover:bg-blue-100 text-blue-600"
+                          >
+                            {expandedId === c.campaignId ? (
+                              <ChevronUp className="h-4 w-4" />
                             ) : (
-                              <>
-                                <ChevronDown className="w-4 h-4" />{" "}
-                                Show {c.actions.length - MAX_VISIBLE} More
-                              </>
+                              <ChevronDown className="h-4 w-4" />
                             )}
                           </Button>
-                        )}
-                      </div>
+                        </td>
+                      </tr>
 
-                      {/* Footer: total & created date */}
-                      <div className="mt-4">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-sm font-semibold">
-                            Total: ${c.totalAmount}
-                          </span>
-                          <p className="text-sm mb-2">
-                            Status:{" "}
-                            <span className={getStatusClass(c.status)}>
-                              {getStatusText(c.status)}
-                            </span>
-                          </p>
+                      {expandedId === c.campaignId && (
+                        <tr>
+                          <td colSpan={9} className="bg-gray-50 px-6 py-4">
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full text-sm">
+                                <thead>
+                                  <tr className="text-left text-gray-500">
+                                    <th className="py-2">Action</th>
+                                    <th className="py-2 text-center">Qty</th>
+                                    <th className="py-2 text-right">Total ($)</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {c.actions.map((a) => (
+                                    <tr
+                                      key={`${c.campaignId}-${a.contentId}`} 
+                                      className="border-t"
+                                    >
+                                      <td className="py-2">{a.contentKey}</td>
+                                      <td className="py-2 text-center">{a.quantity}</td>
+                                      <td className="py-2 text-right">${a.totalCost}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card List */}
+            <div className="md:hidden grid gap-4">
+              {filteredCampaigns.map((c, idx) => (
+                <div key={c.campaignId} className="bg-white shadow rounded-lg p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-lg font-semibold">{idx + 1}. {c.serviceHeading}</h3>
+                      <a
+                        href={c.link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-600 underline break-all"
+                      >
+                        {c.link}
+                      </a>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => toggleExpand(c.campaignId)}
+                      className="h-8 w-8 p-0 text-blue-600"
+                    >
+                      {expandedId === c.campaignId ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <div className="mt-2 text-sm text-gray-600">
+                    <p>Items: {c.actions.length}</p>
+                    <p>Total: ${c.totalAmount.toFixed(2)}</p>
+                    <p>Status: <span className={c.status===1?"text-green-600":"text-yellow-600"}>{getStatusText(c.status)}</span></p>
+                    <p>Created: {formatDate(c.createdAt)}</p>
+                  </div>
+                  {expandedId === c.campaignId && (
+                    <div className="mt-2 border-t pt-2 text-sm">
+                      {c.actions.map(a => (
+                        <div key={`${c.campaignId}-${a.contentId}`} className="flex justify-between">
+                          <span>{a.contentKey} x{a.quantity}</span>
+                          <span>${a.totalCost}</span>
                         </div>
-                        <p className="text-xs text-gray-400">
-                          Created on {formatDate(c.createdAt)}
-                        </p>
+                      ))}
+                      <div className="mt-2">
+                        <Button
+                          size="sm"
+                          onClick={() => downloadInvoice(c.campaignId, c.serviceHeading)}
+                          className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 mt-2"
+                        >
+                          <Download className="w-4 h-4" /> Invoice
+                        </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })}
-          </motion.div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </main>
 
-      {/* --------------------------- FOOTER ----------------------------- */}
       <footer className="bg-gray-900 text-white pb-8 mt-auto">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 sm:px-8">
           <div className="border-t border-gray-800 pt-8 text-center text-gray-400">
             &copy; {new Date().getFullYear()} ShareMitra. All rights reserved.
           </div>

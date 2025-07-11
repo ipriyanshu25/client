@@ -50,8 +50,8 @@ export default function AdminSidebar() {
                 className={clsx(
                   'flex items-center gap-3 px-3 py-2 rounded-md transition-colors',
                   pathname.startsWith(href)
-                    ? 'bg-blue-50 text-blue-600'
-                    : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                    ? 'bg-green-50 text-green-600'
+                    : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
                 )}
               >
                 <Icon className="w-5 h-5" /> {label}
@@ -66,8 +66,8 @@ export default function AdminSidebar() {
                 className={clsx(
                   'w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors',
                   openDocs
-                    ? 'bg-blue-50 text-blue-600'
-                    : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                    ? 'bg-green-50 text-green-600'
+                    : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -84,8 +84,8 @@ export default function AdminSidebar() {
                       className={clsx(
                         'block px-3 py-1 rounded-md transition-colors',
                         pathname === childHref
-                          ? 'bg-blue-100 text-blue-600'
-                          : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                          ? 'bg-green-100 text-green-600'
+                          : 'text-gray-600 hover:text-green-600 hover:bg-gray-50'
                       )}
                     >
                       {childLabel}
@@ -103,8 +103,8 @@ export default function AdminSidebar() {
           className={clsx(
             'flex items-center gap-3 px-3 py-2 rounded-md mt-2 transition-colors',
             pathname.startsWith('/admin/settings')
-              ? 'bg-blue-50 text-blue-600'
-              : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+              ? 'bg-green-50 text-green-600'
+              : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
           )}
         >
           <Settings className="w-5 h-5" /> Settings
