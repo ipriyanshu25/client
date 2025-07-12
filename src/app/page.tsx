@@ -16,6 +16,7 @@ import {
   ArrowRight,
   Shield,
   TrendingUp,
+  Menu,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -48,27 +49,24 @@ const api = axios.create({
   },
 });
 
-interface ServiceContent {
+type ServiceContent = {
   contentId?: string;
   key: string;
   value: string;
-}
+};
 
-interface Service {
+type Service = {
   serviceId: string;
   serviceHeading: string;
   serviceDescription: string;
   serviceContent: ServiceContent[];
-  logo?: string; // Base64 without data prefix
-}
+  logo?: string;
+};
 
 export default function Home() {
   const router = useRouter();
 
-  const [client, setClient] = useState<{
-    name: { firstName: string; lastName: string };
-    email: string;
-  }>({
+  const [client, setClient] = useState<{ name: { firstName: string; lastName: string }; email: string }>({
     name: { firstName: "", lastName: "" },
     email: "",
   });
@@ -97,10 +95,11 @@ export default function Home() {
     if (!token || !clientId) return;
 
     api
-      .post<{
-        name: { firstName: string; lastName: string };
-        email: string;
-      }>("/client/getById", { clientId }, { headers: { Authorization: `Bearer ${token}` } })
+      .post<{ name: { firstName: string; lastName: string }; email: string }>(
+        "/client/getById",
+        { clientId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
       .then((res) => setClient(res.data))
       .catch(console.error);
   }, []);
@@ -131,7 +130,6 @@ export default function Home() {
     router.refresh();
   };
 
-  // Handle Password update
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!oldPassword || !newPassword) return;
@@ -164,143 +162,145 @@ export default function Home() {
     }
   };
 
-  // Render logo or icon
   const renderIconOrLogo = (svc: Service) => {
     if (svc.logo) {
       const src = svc.logo.startsWith("data:")
         ? svc.logo
         : `data:image/png;base64,${svc.logo}`;
-      return (
-        <img
-          src={src}
-          alt={svc.serviceHeading}
-          className="w-16 h-16 rounded-full object-cover"
-        />
-      );
+      return <img src={src} alt={svc.serviceHeading} className="w-16 h-16 rounded-full object-cover" />;
     }
     const h = svc.serviceHeading.toLowerCase();
     if (h.includes("youtube")) return <Play className="h-8 w-8 text-red-600" />;
-    if (h.includes("instagram"))
-      return <Instagram className="h-8 w-8 text-pink-600" />;
+    if (h.includes("instagram")) return <Instagram className="h-8 w-8 text-pink-600" />;
     return <Globe className="h-8 w-8 text-emerald-600" />;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-50 ">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-50">
       {/* HEADER */}
       <header className="fixed inset-x-0 top-0 z-50 w-full border-b border-white/20 bg-white/80 backdrop-blur-md">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           {/* Logo + brand */}
           <Link href="/" className="flex items-center space-x-3">
             <div className="h-10 w-10 overflow-hidden rounded-full">
-              <img
-                src="/logo.png"
-                alt="ShareMitra Logo"
-                className="w-full h-full object-cover"
-              />
+              <img src="/logo.png" alt="ShareMitra Logo" className="w-full h-full object-cover" />
             </div>
-            <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-2xl font-bold text-transparent">
-              ShareMitra
-            </span>
+            <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-2xl font-bold text-transparent">ShareMitra</span>
           </Link>
 
-          {/* Right-hand group */}
+          {/* Nav Actions */}
           <div className="flex items-center space-x-3">
-            {/* Desktop nav */}
-            <nav className="flex items-center space-x-4">
+            {/* Desktop Nav */}
+            <nav className="hidden md:flex items-center space-x-4">
               <Link href="/services">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer"
-                >
+                <Button variant="outline" size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer">
                   Services
                 </Button>
               </Link>
-              {!isLoggedIn && (
-                <Link href="/login">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700 cursor-pointer"
-                  >
-                    <LogIn className="h-4 w-4" /> Login
-                  </Button>
-                </Link>
-              )}
               <Link href="/about" className="text-gray-700 hover:text-emerald-600">
                 About Us
               </Link>
-              <Link
-                href="/contactus"
-                className="text-gray-700 hover:text-emerald-600"
-              >
+              <Link href="/contactus" className="text-gray-700 hover:text-emerald-600">
                 Contact Us
               </Link>
+              {!isLoggedIn ? (
+                <Link href="/login">
+                  <Button variant="outline" className="w-full bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer">
+                    <LogIn className="h-4 w-4 mr-2" /> Login
+                  </Button>
+                </Link>
+              ) : (
+                <Button variant="outline" className=" flex items-center justify-center" onClick={() => router.push('/dashboard')}>
+                  <User className="h-4 w-4 mr-2" /> {fullName}
+                </Button>
+              )}
             </nav>
-
-            {/* Profile / Login */}
-            {isLoggedIn ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 bg-white text-gray-800 hover:bg-gray-100"
-                aria-label="User Menu"
-                 onClick={() => router.push('/dashboard')}
-              >
-                <User className="h-4 w-4" /> {fullName}
-              </Button>
-            ) : null}
+            {/* Mobile Nav */}
+            <div className="flex items-center space-x-2 md:hidden">
+              <Link href="/services">
+                <Button variant="outline" size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer">
+                  Services
+                </Button>
+              </Link>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="p-2">
+                    <Menu className="h-5 w-5 text-gray-700" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-64 bg-white">
+                  <SheetHeader>
+                    <SheetTitle>Menu</SheetTitle>
+                  </SheetHeader>
+                  <div className="flex flex-col space-y-4 mt-4">
+                    {!isLoggedIn ? (
+                      <Link href="/login" className="text-center">
+                        <Button variant="outline" className="w-50 bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer ">
+                          <LogIn className="h-4 w-4 mr-2" /> Login
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button variant="outline" className="w-full flex items-center justify-center" onClick={() => router.push('/dashboard')}>
+                        <User className="h-4 w-4 mr-2" /> {fullName}
+                      </Button>
+                    )}
+                    <Link href="/about" className="text-gray-700 hover:text-emerald-600 text-center">
+                      About Us
+                    </Link>
+                    <Link href="/contactus" className="text-gray-700 hover:text-emerald-600 text-center">
+                      Contact Us
+                    </Link>
+                    {isLoggedIn && (
+                      <Button
+                        variant="destructive"
+                        className="w-full bg-red-600 text-white hover:bg-red-700 cursor-pointer flex items-center justify-center"
+                        onClick={logout}
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Logout
+                      </Button>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 lg:py-32 text-center">
+      {/* HERO */}
+      <section className="relative overflow-hidden py-20 lg:py-32 text-center px-4">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 to-green-600/10" />
-        <div className="container relative mx-auto px-4">
-          <h1 className="mb-6 text-5xl font-bold text-gray-900 lg:text-7xl">
-            Boost Your Social Media{" "}
-            <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
-              Engagement
-            </span>
+        <div className="container relative mx-auto max-w-3xl">
+          <h1 className="mb-6 text-3xl md:text-5xl lg:text-7xl font-bold text-gray-900">
+            Boost Your Social Media <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">Engagement</span>
           </h1>
-          <p className="mb-8 text-xl text-gray-600 lg:text-2xl">
-            Get 100% real human likes, comments, and replies on YouTube and
-            Instagram. Grow your audience with our premium engagement services.
+          <p className="mb-8 text-base md:text-xl lg:text-2xl text-gray-600">
+            Get 100% real human likes, comments, and replies on YouTube and Instagram. Grow your audience with our premium engagement services.
           </p>
-          <Button
-            size="lg"
-            onClick={goToCampaign}
-            className="bg-gradient-to-r from-emerald-600 to-green-600 px-8 py-4 text-lg text-white hover:from-emerald-700 hover:to-green-700 cursor-pointer"
-          >
-            Start Your Campaign
-            <ArrowRight className="ml-2 h-5 w-5" />
+          <Button size="lg" onClick={goToCampaign} className="bg-gradient-to-r from-emerald-600 to-green-600 px-6 py-3 text-lg text-white hover:from-emerald-700 hover:to-green-700 cursor-pointer">
+            Start Your Campaign <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
       </section>
 
-      {/* Services Section */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Our Services</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+      {/* SERVICES */}
+      <section className="py-16 bg-white px-4">
+        <div className="container mx-auto max-w-4xl">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl md:text-4xl font-bold text-gray-900 mb-2">Our Services</h2>
+            <p className="text-sm md:text-xl text-gray-600">
               Comprehensive engagement solutions for your Social Media Handle
             </p>
           </div>
-
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {services.map((service) => (
-              <Card
-                key={service.serviceId}
-                className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 rounded-2xl"
-              >
+              <Card key={service.serviceId} className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 rounded-2xl">
                 <CardHeader className="text-center pb-4">
                   <div className="w-16 h-16 mx-auto mb-4 bg-emerald-100 flex items-center justify-center rounded-full group-hover:bg-emerald-200 transition-colors">
                     {renderIconOrLogo(service)}
                   </div>
-                  <CardTitle className="text-2xl font-semibold text-gray-900">
+                  <CardTitle className="text-xl md:text-2xl font-semibold text-gray-900">
                     {service.serviceHeading}
                   </CardTitle>
                   <CardDescription className="text-gray-600">
@@ -309,14 +309,9 @@ export default function Home() {
                 </CardHeader>
                 <CardContent className="flex flex-col items-center space-y-3">
                   {service.serviceContent.map((item) => (
-                    <div
-                      key={item.contentId || item.key}
-                      className="flex items-center space-x-3"
-                    >
+                    <div key={item.contentId || item.key} className="flex items-center space-x-3">
                       <CheckCircle className="h-5 w-5 text-green-500" />
-                      <span>
-                        {item.key}: ${item.value}
-                      </span>
+                      <span className="text-sm md:text-base">{item.key}: {item.value}$</span>
                     </div>
                   ))}
                   <div className="mt-4">
@@ -330,19 +325,16 @@ export default function Home() {
               </Card>
             ))}
           </div>
-
           <div className="text-center mt-8">
             <Link href="/services">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-emerald-600 to-green-600 rounded-md px-6 py-3 text-white hover:from-emerald-700 hover:to-green-700 cursor-pointer"
-              >
+              <Button size="lg" className="bg-gradient-to-r from-emerald-600 to-green-600 px-6 py-3 text-white hover:from-emerald-700 hover:to-green-700 cursor-pointer">
                 View More Services
               </Button>
             </Link>
           </div>
         </div>
       </section>
+
 
 
       {/* How It Works */}
