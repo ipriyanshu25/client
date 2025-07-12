@@ -272,7 +272,7 @@ export default function Home() {
       <section className="relative overflow-hidden py-20 lg:py-32 text-center px-4">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 to-green-600/10" />
         <div className="container relative mx-auto max-w-3xl">
-          <h1 className="mb-6 text-3xl md:text-5xl lg:text-7xl font-bold text-gray-900">
+          <h1 className="mb-6 text-3xl md:text-5xl lg:text-7xl font-bold text-gray-900 mt-4">
             Boost Your Social Media <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">Engagement</span>
           </h1>
           <p className="mb-8 text-base md:text-xl lg:text-2xl text-gray-600">
@@ -311,7 +311,7 @@ export default function Home() {
                   {service.serviceContent.map((item) => (
                     <div key={item.contentId || item.key} className="flex items-center space-x-3">
                       <CheckCircle className="h-5 w-5 text-green-500" />
-                      <span className="text-sm md:text-base">{item.key}: {item.value}$</span>
+                      <span className="text-sm md:text-base">{item.key}: ${item.value}</span>
                     </div>
                   ))}
                   <div className="mt-4">

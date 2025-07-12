@@ -160,7 +160,7 @@ export default function ServicesPage() {
                     {svc.serviceContent.map(item => (
                       <div key={item.contentId} className="flex items-center space-x-3">
                         <CheckCircle className="h-5 w-5 text-green-500" />
-                        <span>{item.key}: {item.value}$</span>
+                        <span>{item.key}: ${item.value}</span>
                       </div>
                     ))}
                     <div className="mt-4">
